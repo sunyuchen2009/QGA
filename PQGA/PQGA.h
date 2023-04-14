@@ -52,7 +52,7 @@ public:
 		}
 		this->mFitness = 0.0;
 		this->mBinary = "";
-		this->mGenesDec = {0, 0};
+		this->mGenesDec = { 0, 0 };
 		this->mSpecFlag = 0;
 	};
 	Individual(vector<qubit> chrom, double fitness, string binary) {

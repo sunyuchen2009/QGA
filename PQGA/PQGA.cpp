@@ -1,4 +1,4 @@
-﻿#include "QGA.h"
+﻿#include "PQGA.h"
 using namespace std;
 
 //生成[0, 1]之间的随机数
@@ -11,9 +11,9 @@ double srand() {
 
 /*
 * 初始化种群，使用量子比特编码
-* @param M 种群大小 
+* @param M 种群大小
 * @param N 每个基因的量子比特编码长度
-* @param strategyFlag 初始化策略：0（默认两个量子态等概率） 
+* @param strategyFlag 初始化策略：0（默认两个量子态等概率）
                                   1（小生境初始化策略） (α, β) = (sqrt(j / n), sqrt(1 - j / n))
 */
 void initPop(int M, int N, vector<Individual>& population, int strategyFlag) {
@@ -43,20 +43,31 @@ void initPop(int M, int N, vector<Individual>& population, int strategyFlag) {
 }
 
 /*
+* 多宇宙机制初始化，采用四宇宙模型
+* u1为主宇宙
+*/
+void initUniverse(vector<Individual>& u1, vector<Individual>& u2, vector<Individual>& u3, vector<Individual>& u4) {
+    initPop(POP_SIZE, CHROM_LEN, u1, 0);
+    initPop(POP_SIZE, CHROM_LEN, u2, 1);
+    initPop(POP_SIZE, CHROM_LEN, u3, 1);
+    initPop(POP_SIZE, CHROM_LEN, u4, 1);
+}
+
+/*
 * 塌缩函数，完成对种群的一次测量
 */
 void collapse(vector<Individual>& population) {
     for (int i = 0; i < POP_SIZE; i++) {
         string binTemp = "";
         for (int j = 0; j < CHROM_LEN; j++) {
-             double pick = srand();
-             double alpha = population[i].getChrom()[j].alpha;
-             if (pick > alpha * alpha) {
-                 binTemp += '1';
-             }
-             else {
-                 binTemp += '0';
-             }
+            double pick = srand();
+            double alpha = population[i].getChrom()[j].alpha;
+            if (pick > alpha * alpha) {
+                binTemp += '1';
+            }
+            else {
+                binTemp += '0';
+            }
         }
         population[i].setBinary(binTemp);
         //同时初始化specFlag;
@@ -208,7 +219,7 @@ void qGateRAS_2(vector<Individual>& population, Individual& best) {
                 delta = 0;
                 s = 0;
             }
-            else if ((x == '0' && b == '1') || ( curFit < bestFit)) {
+            else if ((x == '0' && b == '1') || (curFit < bestFit)) {
                 delta = 0.01 * PI;
                 if (alpha * beta > 0) {
                     s = 1;
@@ -294,7 +305,7 @@ void qGateRAS_2(vector<Individual>& population, Individual& best) {
 * K1、K2为两个正常数且K1 < K2，用于控制收敛速度
 */
 void qGateAdaptive(vector<Individual>& population, Individual& best, double& f_max, double& f_min) {
-    const double CONST_ARG =(f_max > f_min) ?  (K2 - K1) / (f_max - f_min) : 0;
+    const double CONST_ARG = (f_max > f_min) ? (K2 - K1) / (f_max - f_min) : 0;
 
     double bestFit = best.getFitness();                         //最优个体适应度
     for (int i = 0; i < POP_SIZE; i++) {
@@ -388,7 +399,7 @@ void qGateAdaptive(vector<Individual>& population, Individual& best, double& f_m
                 double newBeta = alpha * sin(e) + beta * cos(e);
                 population[i].setQubitByPos(j, newAlpha, newBeta);
             }
-            
+
         }
     }
 
@@ -480,7 +491,7 @@ void calFitness(vector<Individual>& population, Individual& best, double& f_max,
         best = population[bestIdx];
     }
     //根据适应度，从大到小排序种群，并根据移民比率修改flag
-    sort(population.begin(), population.end(), [](Individual& a, Individual& b) {return a.getFitness() > b.getFitness();});
+    sort(population.begin(), population.end(), [](Individual& a, Individual& b) {return a.getFitness() > b.getFitness(); });
     for (int i = 0; i <= POP_SIZE * 10 / 100; i++) {
         population[i].setSpecFlag(1);
         //cout << population[i].getFitness() << endl;
@@ -493,6 +504,33 @@ void calFitness(vector<Individual>& population, Individual& best, double& f_max,
     //population[minIdx].setSpecFlag(2);
 }
 
+/*
+* 移民算子，将从宇宙的最优解移民到u1，并替换掉u1较差的解，同时主宇宙将一些次优解回馈给从宇宙
+* @param u1 主宇宙
+* @param u2 从宇宙
+* @param u3 从宇宙
+* @param u4 从宇宙
+*/
+void migration(vector<Individual>& u1, vector<Individual>& u2, vector<Individual>& u3, vector<Individual>& u4) {
+    //各个从宇宙的最优解移民道到主宇宙
+    int m = POP_SIZE * MIGRATE_RATE - 1;
+    int n = POP_SIZE * MIGRATE_RATE - 1;
+    int k = POP_SIZE * MIGRATE_RATE - 1;
+    for (int i = POP_SIZE - 1; i >= POP_SIZE - POP_SIZE * MIGRATE_RATE * 3; i--) {
+        if (i >= POP_SIZE - POP_SIZE * MIGRATE_RATE) {
+            u1[i] = u2[m--];
+        }
+        else if (i < POP_SIZE - POP_SIZE * MIGRATE_RATE * 2) {
+            u1[i] = u3[n--];
+        }
+        else {
+            u1[i] = u4[k--];
+        }
+    }
+    cout << m << " " << n << " " << k << endl;
+
+}
+
 void printPopulation(vector<Individual>& pop) {
     for (int i = 0; i < pop.size(); i++) {
         cout << pop[i].toString() << endl;
@@ -500,38 +538,74 @@ void printPopulation(vector<Individual>& pop) {
 }
 
 /*
-* QGA主函数
+* 多宇宙并行自适应QGA主函数
 */
-void quantumAlgorithm() {
-    Individual best;
-    vector<Individual> population;
+void maQuantumAlgorithm() {
+    Individual best;        //全局最优解
+    vector<Individual> u1;
+    vector<Individual> u2;
+    vector<Individual> u3;
+    vector<Individual> u4;
 
-    //初始化种群
-    initPop(POP_SIZE, CHROM_LEN, population, 0);
+    //初始化各个宇宙
+    initUniverse(u1, u2, u3, u4);
     //对种群进行一次测量，得到二进制编码
-    collapse(population);
+    collapse(u1);
+    collapse(u2);
+    collapse(u3);
+    collapse(u4);
     //计算适应度
-    double f_max = 0;
-    double f_min = 0;
-    calFitness(population, best, f_max, f_min);
-    //进化迭代
-    for (int gen = 0; gen < MAX_GEN; gen++) {
-        cout << "当前进化代数： " << gen << endl;
-        //测量种群
-        collapse(population);
-        //计算适应度
-        double f_max = 0;
-        double f_min = 0;
-        calFitness(population, best, f_max, f_min);
-        //量子旋转门
-        qGateAdaptive(population, best, f_max, f_min);
-        cout << "best chrom:\n" << best.toString() << endl;
+    double f_max1 = 0;
+    double f_min1 = 0;
+    calFitness(u1, best, f_max1, f_min1);
+    double f_max2 = 0;
+    double f_min2 = 0;
+    calFitness(u2, best, f_max2, f_min2);
+    double f_max3 = 0;
+    double f_min3 = 0;
+    calFitness(u3, best, f_max3, f_min3);
+    double f_max4 = 0;
+    double f_min4 = 0;
+    calFitness(u4, best, f_max4, f_min4);
+    int flag = 5;
+    while (flag--) {
+        //各个宇宙进化迭代
+        for (int gen = 0; gen < MAX_GEN; gen++) {
+            cout << "当前进化代数： " << gen << endl;
+            //测量种群
+            collapse(u1);
+            collapse(u2);
+            collapse(u3);
+            collapse(u4);
+            //计算适应度
+            double f_max1 = 0;
+            double f_min1 = 0;
+            calFitness(u1, best, f_max1, f_min1);
+            double f_max2 = 0;
+            double f_min2 = 0;
+            calFitness(u2, best, f_max2, f_min2);
+            double f_max3 = 0;
+            double f_min3 = 0;
+            calFitness(u3, best, f_max3, f_min3);
+            double f_max4 = 0;
+            double f_min4 = 0;
+            calFitness(u4, best, f_max4, f_min4);
+            //量子旋转门
+            qGateAdaptive(u1, best, f_max1, f_min1);
+            qGateAdaptive(u2, best, f_max2, f_min2);
+            qGateAdaptive(u3, best, f_max3, f_min3);
+            qGateAdaptive(u4, best, f_max4, f_min4);
+            cout << "best chrom:\n" << best.toString() << endl;
+        }
+        //移民算子
+        migration(u1, u2, u3, u4);
     }
+
 }
 
 int main()
 {
-    quantumAlgorithm();
+    maQuantumAlgorithm();
 
     std::cout << "Hello World!\n";
 }
