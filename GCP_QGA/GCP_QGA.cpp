@@ -1,4 +1,4 @@
-﻿#include "PQGA.h"
+﻿#include "GCP_QGA.h"
 using namespace std;
 
 //生成[0, 1]之间的随机数
@@ -40,17 +40,6 @@ void initPop(int M, int N, vector<Individual>& population, int strategyFlag) {
     default:
         break;
     }
-}
-
-/*
-* 多宇宙机制初始化，采用四宇宙模型
-* u1为主宇宙
-*/
-void initUniverse(vector<Individual>& u1, vector<Individual>& u2, vector<Individual>& u3, vector<Individual>& u4) {
-    initPop(POP_SIZE, CHROM_LEN, u1, 0);
-    initPop(POP_SIZE, CHROM_LEN, u2, 1);
-    initPop(POP_SIZE, CHROM_LEN, u3, 1);
-    initPop(POP_SIZE, CHROM_LEN, u4, 1);
 }
 
 /*
@@ -460,6 +449,127 @@ double objFuncShaffer(Individual& indv) {
 }
 
 /*
+* Gragh Coloring Problem Fitness:
+* 每个基因代表了当前顶点的颜色编号（从0  - 10）
+*/
+double gcpFunc(Individual& indv) {
+    string binary = indv.getBinary();
+    vector<double> x(GENE_NUM, 0);
+    vector<range> bound = { GENE_NUM, range(0, 5)};
+    set<double> colors;
+    //vector<pair<int, int>> edge = { {0, 1}, {0, 4}, {0, 5}, {1, 2},{1, 0}, {1, 6}, {2, 1}, {2, 3}, {2, 7}, {3, 2}, {3, 4}, {3, 8}, {4, 3}, {4, 8}, {4, 9}, {5, 0}, {5, 7}, {5, 8}, {6, 1}, {6, 8}, {6, 9}, {7, 2}, {7, 5}, {7, 9}, {8, 3}, {8, 5}, {8, 6}, {9, 4}, {9, 6}, {9, 7} };
+    vector<vector<int>> edge = { {0, 1, 4, 5},
+                                {1, 0, 2, 6},
+                                {2, 1, 3, 7},
+                                {3, 2, 4, 8},
+                                {4, 0, 3, 9},
+                                {5, 0, 7, 8},
+                                {6, 1, 8, 9},
+                                {7, 2, 5, 9},
+                                {8, 3, 5, 6},
+                                {9, 4, 6, 7}, };
+    for (int i = 0; i < binary.size(); i += GENE_LEN) {
+        int index = i / GENE_LEN;
+        string curGene = binary.substr(i, GENE_LEN);
+        int var = stoi(curGene, nullptr, 2);
+        //将变量值映射到对应的range区间
+        var = bound[index].floor + var / (pow(2, GENE_LEN) - 1) * (bound[index].ceil - bound[index].floor);
+        x[index] = static_cast<double>(var);
+        colors.emplace(x[index]);
+        //cout << "x" << index << " = " << x[index] << endl;
+    }
+    indv.setGeneDec(x);
+    //相邻顶点颜色相同的顶点个数
+    int sameCnt = 0;
+    //使用的颜色种数
+    int colorNum = colors.size();
+    for (auto& e : edge) {
+        set<double> temp;
+        for (auto& v : e) {
+            //使用集合来验证重复元素
+            if (temp.find(x[v]) != temp.end()) {
+                sameCnt++;
+            }
+            else {
+                temp.emplace(x[v]);
+            }
+        }
+    }
+    double fitness = 1 + 1.0 / (sameCnt*5000 + colorNum);
+    indv.setSameCnt(sameCnt);
+    indv.setColorNum(colorNum);
+    return fitness;
+}
+
+/*
+* Gragh Coloring Problem Fitness:
+* queen5_5: 25个顶点，320条边
+*/
+double gcpQueen5_5Func(Individual& indv) {
+    string binary = indv.getBinary();
+    vector<double> x(GENE_NUM, 0);
+    vector<range> bound = { GENE_NUM, range(0, 7) };
+    set<double> colors;
+    //vector<pair<int, int>> edge = { {0, 1}, {0, 4}, {0, 5}, {1, 2},{1, 0}, {1, 6}, {2, 1}, {2, 3}, {2, 7}, {3, 2}, {3, 4}, {3, 8}, {4, 3}, {4, 8}, {4, 9}, {5, 0}, {5, 7}, {5, 8}, {6, 1}, {6, 8}, {6, 9}, {7, 2}, {7, 5}, {7, 9}, {8, 3}, {8, 5}, {8, 6}, {9, 4}, {9, 6}, {9, 7} };
+    vector<vector<int>> edge = { {0, 6, 12, 18, 24, 1, 2, 3, 4, 5, 10, 15, 20},
+                                {1, 7, 13, 19, 5, 2, 3, 4, 6, 11, 16, 21, 0},
+                                {2, 8, 14, 6, 10, 3, 4, 7, 12, 17, 22, 1, 0},
+                                {3, 9, 7, 11, 15, 4, 8, 13, 18, 23, 2, 1, 0},
+                                {4, 8, 12, 16, 20, 9, 14, 19, 24, 3, 2, 1, 0},
+                                {5, 11, 17, 23, 6, 7, 8, 9, 10, 15, 20, 1, 0},
+                                {6, 12, 18, 24, 10, 7, 8, 9, 11, 16, 21, 5, 2, 1, 0},
+                                {7, 13, 19, 11, 15, 8, 9, 12, 17, 22, 6, 5, 3, 2, 1},
+                                {8, 14, 12, 16, 20, 9, 13, 18, 23, 7, 6, 5, 4, 3, 2},
+                                {9, 13, 17, 21, 14, 19, 24, 8, 7, 6, 5, 4, 3},
+                                {10, 16, 22, 11, 12, 13, 14, 15, 20, 6, 5, 2, 0},
+                                {11, 17, 23, 15, 12, 13, 14, 16, 21, 10, 7, 6, 5, 3, 1},
+                                {12, 18, 24, 16, 20, 13, 14, 17, 22, 11, 10, 8, 7, 6, 4, 2, 0},
+                                {13, 19, 17, 21, 14, 18, 23, 12, 11, 10, 9, 8, 7, 3, 1},
+                                {14, 18, 22, 19, 24, 13, 12, 11, 10, 9, 8, 4, 2},
+                                {15, 21, 16, 17, 18, 19, 20, 11, 10, 7, 5, 3, 0},
+                                {16, 22, 20, 17, 18, 19, 21, 15, 12, 11, 10, 8, 6, 4, 1},
+                                {17, 23, 21, 18, 19, 22, 16, 15, 13, 12, 11, 9, 7, 5, 2},
+                                {18, 24, 22, 19, 23, 17, 16, 15, 14, 13, 12, 8, 6, 3, 0},
+                                {19, 23, 24, 18, 17, 16, 15, 14, 13, 9, 7, 4, 1},
+                                {20, 21, 22, 23, 24, 16, 15, 12, 10, 8, 5, 4, 0},
+                                {21, 22, 23, 24, 20, 17, 16, 15, 13, 11, 9, 6, 1},
+                                {22, 23, 24, 21, 20, 18, 17, 16, 14, 12, 10, 7, 2},
+                                {23, 24, 22, 21, 20, 19, 18, 17, 13, 11, 8, 5, 3},
+                                {24, 23, 22, 21, 20, 19, 18, 14, 12, 9, 6, 4, 0} };
+    for (int i = 0; i < binary.size(); i += GENE_LEN) {
+        int index = i / GENE_LEN;
+        string curGene = binary.substr(i, GENE_LEN);
+        int var = stoi(curGene, nullptr, 2);
+        //将变量值映射到对应的range区间
+        var = bound[index].floor + var / (pow(2, GENE_LEN) - 1) * (bound[index].ceil - bound[index].floor);
+        x[index] = static_cast<double>(var);
+        colors.emplace(x[index]);
+        //cout << "x" << index << " = " << x[index] << endl;
+    }
+    indv.setGeneDec(x);
+    //相邻顶点颜色相同的顶点个数
+    int sameCnt = 0;
+    //使用的颜色种数
+    int colorNum = colors.size();
+    for (auto& e : edge) {
+        set<double> temp;
+        for (auto& v : e) {
+            //使用集合来验证重复元素
+            if (temp.find(x[v]) != temp.end()) {
+                sameCnt++;
+            }
+            else {
+                temp.emplace(x[v]);
+            }
+        }
+    }
+    double fitness = 1 + 1.0 / (sameCnt * 5000 + colorNum);
+    indv.setSameCnt(sameCnt);
+    indv.setColorNum(colorNum);
+    return fitness;
+}
+
+/*
 * 适应度计算，计算种群中所有个体的适应度值
 * @param population: 种群
 */
@@ -474,7 +584,7 @@ void calFitness(vector<Individual>& population, Individual& best, double& f_max,
     int maxIdx = 0;  //f_max位置
     int minIdx = 0;  //f_min位置
     for (int i = 0; i < population.size(); i++) {
-        double fitness = objFuncShaffer(population[i]);
+        double fitness = gcpFunc(population[i]);
         //记录最优个体
         bestIdx = (fitness > bestFit) ? i : bestIdx;
         bestFit = max(bestFit, fitness);
@@ -487,6 +597,8 @@ void calFitness(vector<Individual>& population, Individual& best, double& f_max,
         minFit = min(minFit, fitness);
     }
     //如果本代种群中有比最优个体适应度更高的个体，更新best
+    cout << "best indv = " << best.getFitness() << endl;
+    cout << "bestFit = " << bestFit << endl;
     if (bestFit != best.getFitness()) {
         best = population[bestIdx];
     }
@@ -504,33 +616,6 @@ void calFitness(vector<Individual>& population, Individual& best, double& f_max,
     //population[minIdx].setSpecFlag(2);
 }
 
-/*
-* 移民算子，将从宇宙的最优解移民到u1，并替换掉u1较差的解，同时主宇宙将一些次优解回馈给从宇宙
-* @param u1 主宇宙
-* @param u2 从宇宙
-* @param u3 从宇宙
-* @param u4 从宇宙
-*/
-void migration(vector<Individual>& u1, vector<Individual>& u2, vector<Individual>& u3, vector<Individual>& u4) {
-    cout << "Migrating... " << '\n';
-    //各个从宇宙的最优解移民道到主宇宙
-    int m = POP_SIZE * MIGRATE_RATE - 1;
-    int n = POP_SIZE * MIGRATE_RATE - 1;
-    int k = POP_SIZE * MIGRATE_RATE - 1;
-    for (int i = POP_SIZE - 1; i >= POP_SIZE - POP_SIZE * MIGRATE_RATE * 3; i--) {
-        if (i >= POP_SIZE - POP_SIZE * MIGRATE_RATE) {
-            u1[i] = u2[m--];
-        }
-        else if (i < POP_SIZE - POP_SIZE * MIGRATE_RATE * 2) {
-            u1[i] = u3[n--];
-        }
-        else {
-            u1[i] = u4[k--];
-        }
-    }
-    //cout << m << " " << n << " " << k << endl;
-}
-
 void printPopulation(vector<Individual>& pop) {
     for (int i = 0; i < pop.size(); i++) {
         cout << pop[i].toString() << endl;
@@ -538,74 +623,40 @@ void printPopulation(vector<Individual>& pop) {
 }
 
 /*
-* 多宇宙并行自适应QGA主函数
+* QGA主函数
 */
-void maQuantumAlgorithm() {
-    Individual best;        //全局最优解
-    vector<Individual> u1;
-    vector<Individual> u2;
-    vector<Individual> u3;
-    vector<Individual> u4;
+void quantumAlgorithm() {
+    Individual best;
+    vector<Individual> population;
 
-    //初始化各个宇宙
-    initUniverse(u1, u2, u3, u4);
+    //初始化种群
+    initPop(POP_SIZE, CHROM_LEN, population, 0);
     //对种群进行一次测量，得到二进制编码
-    collapse(u1);
-    collapse(u2);
-    collapse(u3);
-    collapse(u4);
+    //collapse(population);
     //计算适应度
-    double f_max1 = 0;
-    double f_min1 = 0;
-    calFitness(u1, best, f_max1, f_min1);
-    double f_max2 = 0;
-    double f_min2 = 0;
-    calFitness(u2, best, f_max2, f_min2);
-    double f_max3 = 0;
-    double f_min3 = 0;
-    calFitness(u3, best, f_max3, f_min3);
-    double f_max4 = 0;
-    double f_min4 = 0;
-    calFitness(u4, best, f_max4, f_min4);
-    int flag = 2;
-    while (flag--) {
-        //各个宇宙进化迭代
-        for (int gen = 1; gen <= MAX_GEN; gen++) {
-            cout << "当前进化代数： " << gen << endl;
-            //测量种群
-            collapse(u1);
-            collapse(u2);
-            collapse(u3);
-            collapse(u4);
-            //计算适应度
-            double f_max1 = 0;
-            double f_min1 = 0;
-            calFitness(u1, best, f_max1, f_min1);
-            double f_max2 = 0;
-            double f_min2 = 0;
-            calFitness(u2, best, f_max2, f_min2);
-            double f_max3 = 0;
-            double f_min3 = 0;
-            calFitness(u3, best, f_max3, f_min3);
-            double f_max4 = 0;
-            double f_min4 = 0;
-            calFitness(u4, best, f_max4, f_min4);
-            //量子旋转门
-            qGateAdaptive(u2, best, f_max2, f_min2);
-            qGateAdaptive(u3, best, f_max3, f_min3);
-            qGateAdaptive(u4, best, f_max4, f_min4);
-            qGateAdaptive(u1, best, f_max1, f_min1);
-            cout << "best chrom:\n" << best.toString() << endl;
-        }
-        //移民算子
-        migration(u1, u2, u3, u4);
+    //double f_max = 0;
+    //double f_min = 0;
+    //calFitness(population, best, f_max, f_min);
+    //进化迭代
+    for (int gen = 0; gen < MAX_GEN; gen++) {
+        cout << "当前进化代数： " << gen << endl;
+        //测量种群
+        collapse(population);
+        //计算适应度
+        double f_max = 0;
+        double f_min = 0;
+        calFitness(population, best, f_max, f_min);
+        //量子旋转门
+        qGateAdaptive(population, best, f_max, f_min);
+        //qGateRAS_2(population, best);
+        //qGateRAS_2(population, best);
+        cout << "best chrom:\n" << best.toString() << endl;
     }
-
 }
 
 int main()
 {
-    maQuantumAlgorithm();
+    quantumAlgorithm();
 
     std::cout << "Hello World!\n";
 }

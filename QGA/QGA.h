@@ -11,7 +11,7 @@
 #include <float.h>
 using namespace std;
 
-const int MAX_GEN = 50;						//最大迭代次数
+const int MAX_GEN = 30;						//最大迭代次数
 const int POP_SIZE = 100;					//种群大小
 const int GENE_NUM = 2;						//基因个数，即变量的个数
 const int GENE_LEN = 21;					//每个基因的编码长度，即每个变量的二进制编码长度
@@ -52,14 +52,14 @@ public:
 		}
 		this->mFitness = 0.0;
 		this->mBinary = "";
-		this->mGenesDec = {0, 0};
+		this->mGenesDec.resize(GENE_NUM, 0);
 		this->mSpecFlag = 0;
 	};
 	Individual(vector<qubit> chrom, double fitness, string binary) {
 		this->mChrom = chrom;
 		this->mFitness = fitness;
 		this->mBinary = binary;
-		this->mGenesDec = { 0, 0 };
+		this->mGenesDec.resize(GENE_NUM, 0);
 		this->mSpecFlag = 0;
 	}
 	vector<qubit> getChrom() {

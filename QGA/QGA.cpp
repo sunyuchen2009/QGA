@@ -515,7 +515,7 @@ void quantumAlgorithm() {
     double f_min = 0;
     calFitness(population, best, f_max, f_min);
     //进化迭代
-    for (int gen = 0; gen < MAX_GEN; gen++) {
+    for (int gen = 2; gen < MAX_GEN; gen++) {
         cout << "当前进化代数： " << gen << endl;
         //测量种群
         collapse(population);

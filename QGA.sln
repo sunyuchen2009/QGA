@@ -7,6 +7,8 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "QGA", "QGA\QGA.vcxproj", "{
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "PQGA", "PQGA\PQGA.vcxproj", "{353D927E-EBBF-49DC-BDF9-B5046953FD15}"
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "GCP_QGA", "GCP_QGA\GCP_QGA.vcxproj", "{022432A6-68B5-4744-9B4A-20F8F1F39E32}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|x64 = Debug|x64
@@ -31,6 +33,14 @@ Global
 		{353D927E-EBBF-49DC-BDF9-B5046953FD15}.Release|x64.Build.0 = Release|x64
 		{353D927E-EBBF-49DC-BDF9-B5046953FD15}.Release|x86.ActiveCfg = Release|Win32
 		{353D927E-EBBF-49DC-BDF9-B5046953FD15}.Release|x86.Build.0 = Release|Win32
+		{022432A6-68B5-4744-9B4A-20F8F1F39E32}.Debug|x64.ActiveCfg = Debug|x64
+		{022432A6-68B5-4744-9B4A-20F8F1F39E32}.Debug|x64.Build.0 = Debug|x64
+		{022432A6-68B5-4744-9B4A-20F8F1F39E32}.Debug|x86.ActiveCfg = Debug|Win32
+		{022432A6-68B5-4744-9B4A-20F8F1F39E32}.Debug|x86.Build.0 = Debug|Win32
+		{022432A6-68B5-4744-9B4A-20F8F1F39E32}.Release|x64.ActiveCfg = Release|x64
+		{022432A6-68B5-4744-9B4A-20F8F1F39E32}.Release|x64.Build.0 = Release|x64
+		{022432A6-68B5-4744-9B4A-20F8F1F39E32}.Release|x86.ActiveCfg = Release|Win32
+		{022432A6-68B5-4744-9B4A-20F8F1F39E32}.Release|x86.Build.0 = Release|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
