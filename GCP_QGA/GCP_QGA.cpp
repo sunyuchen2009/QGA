@@ -51,6 +51,9 @@ void collapse(vector<Individual>& population) {
         for (int j = 0; j < CHROM_LEN; j++) {
             double pick = srand();
             double alpha = population[i].getChrom()[j].alpha;
+            //cout << "pick = " << pick << '\n';
+            //cout << "alpha^2 = " << alpha * alpha << '\n';
+
             if (pick > alpha * alpha) {
                 binTemp += '1';
             }
@@ -93,7 +96,7 @@ void qGateRAS_1(vector<Individual>& population, Individual& best) {
                 delta = 0;
                 s = 0;
             }
-            else if ((x == '0' && b == '1') || (curFit < bestFit)) {
+            else if ((x == '0' && b == '1') && (curFit < bestFit)) {
                 delta = 0;
                 s = 0;
             }
@@ -208,7 +211,7 @@ void qGateRAS_2(vector<Individual>& population, Individual& best) {
                 delta = 0;
                 s = 0;
             }
-            else if ((x == '0' && b == '1') || (curFit < bestFit)) {
+            else if ((x == '0' && b == '1') && (curFit < bestFit)) {
                 delta = 0.01 * PI;
                 if (alpha * beta > 0) {
                     s = 1;
@@ -300,6 +303,11 @@ void qGateAdaptive(vector<Individual>& population, Individual& best, double& f_m
     for (int i = 0; i < POP_SIZE; i++) {
         //根据当前个体计算旋转角
         double theta = K1 + (population[i].getFitness() - f_min) * CONST_ARG;
+        //个体变异概率，默认为80%
+        double mutationPick = srand();
+        if (mutationPick > 0.8) {
+            continue;
+        }
         for (int j = 0; j < CHROM_LEN; j++) {
             double alpha = population[i].getChrom()[j].alpha;   //α
             double beta = population[i].getChrom()[j].beta;     //β
@@ -313,7 +321,7 @@ void qGateAdaptive(vector<Individual>& population, Individual& best, double& f_m
                 delta = 0;
                 s = 0;
             }
-            else if ((x == '0' && b == '1') || (curFit < bestFit)) {
+            else if ((x == '0' && b == '1') && (curFit < bestFit)) {
                 delta = theta;
                 if (alpha * beta > 0) {
                     s = 1;
@@ -374,6 +382,16 @@ void qGateAdaptive(vector<Individual>& population, Individual& best, double& f_m
                 }
             }
             double e = s * delta;       //旋转角
+            /*cout << "-----------------------\n";
+            cout << "old alpha = " << alpha << '\n';
+            cout << "old beta = " << beta << '\n';
+            cout << "cur fit = " << curFit << '\n';
+            cout << "best fit = " << bestFit << '\n';
+            cout << "x = " << x << '\n';
+            cout << "b = " << b << '\n';
+            cout << "s = " << s << '\n';
+            cout << "a * b = " << alpha * beta << '\n';*/
+            
             if (e == 0) {
                 //H-ep门
                 if (alpha * alpha <= EPSLION && beta * beta >= 1 - EPSLION) {
@@ -388,7 +406,9 @@ void qGateAdaptive(vector<Individual>& population, Individual& best, double& f_m
                 double newBeta = alpha * sin(e) + beta * cos(e);
                 population[i].setQubitByPos(j, newAlpha, newBeta);
             }
-
+            /*cout << "new alpha = " << population[i].getChrom()[j].alpha << '\n';
+            cout << "new beta = " << population[i].getChrom()[j].beta << '\n';
+            cout << "-----------------------\n";*/
         }
     }
 
@@ -458,7 +478,7 @@ double gcpFunc(Individual& indv) {
     vector<range> bound = { GENE_NUM, range(0, 5)};
     set<double> colors;
     //vector<pair<int, int>> edge = { {0, 1}, {0, 4}, {0, 5}, {1, 2},{1, 0}, {1, 6}, {2, 1}, {2, 3}, {2, 7}, {3, 2}, {3, 4}, {3, 8}, {4, 3}, {4, 8}, {4, 9}, {5, 0}, {5, 7}, {5, 8}, {6, 1}, {6, 8}, {6, 9}, {7, 2}, {7, 5}, {7, 9}, {8, 3}, {8, 5}, {8, 6}, {9, 4}, {9, 6}, {9, 7} };
-    vector<vector<int>> edge = { {0, 1, 4, 5},
+    /*vector<vector<int>> edge = { {0, 1, 4, 5},
                                 {1, 0, 2, 6},
                                 {2, 1, 3, 7},
                                 {3, 2, 4, 8},
@@ -467,7 +487,12 @@ double gcpFunc(Individual& indv) {
                                 {6, 1, 8, 9},
                                 {7, 2, 5, 9},
                                 {8, 3, 5, 6},
-                                {9, 4, 6, 7}, };
+                                {9, 4, 6, 7}, };*/
+    vector<vector<int>> edge = { {0, 1, 2, 3, 4},
+                                {1, 0, 3},
+                                {2, 0, 3},
+                                {3, 0, 1, 2},
+                                {4, 0, 3} };
     for (int i = 0; i < binary.size(); i += GENE_LEN) {
         int index = i / GENE_LEN;
         string curGene = binary.substr(i, GENE_LEN);
@@ -478,6 +503,7 @@ double gcpFunc(Individual& indv) {
         colors.emplace(x[index]);
         //cout << "x" << index << " = " << x[index] << endl;
     }
+    //cout << "----------------------\n";
     indv.setGeneDec(x);
     //相邻顶点颜色相同的顶点个数
     int sameCnt = 0;
@@ -495,7 +521,7 @@ double gcpFunc(Individual& indv) {
             }
         }
     }
-    double fitness = 1 + 1.0 / (sameCnt*5000 + colorNum);
+    double fitness = -(sameCnt + colorNum);
     indv.setSameCnt(sameCnt);
     indv.setColorNum(colorNum);
     return fitness;
@@ -508,7 +534,7 @@ double gcpFunc(Individual& indv) {
 double gcpQueen5_5Func(Individual& indv) {
     string binary = indv.getBinary();
     vector<double> x(GENE_NUM, 0);
-    vector<range> bound = { GENE_NUM, range(0, 7) };
+    vector<range> bound = { GENE_NUM, range(0, 20) };
     set<double> colors;
     //vector<pair<int, int>> edge = { {0, 1}, {0, 4}, {0, 5}, {1, 2},{1, 0}, {1, 6}, {2, 1}, {2, 3}, {2, 7}, {3, 2}, {3, 4}, {3, 8}, {4, 3}, {4, 8}, {4, 9}, {5, 0}, {5, 7}, {5, 8}, {6, 1}, {6, 8}, {6, 9}, {7, 2}, {7, 5}, {7, 9}, {8, 3}, {8, 5}, {8, 6}, {9, 4}, {9, 6}, {9, 7} };
     vector<vector<int>> edge = { {0, 6, 12, 18, 24, 1, 2, 3, 4, 5, 10, 15, 20},
@@ -563,7 +589,8 @@ double gcpQueen5_5Func(Individual& indv) {
             }
         }
     }
-    double fitness = 1 + 1.0 / (sameCnt * 5000 + colorNum);
+    //double fitness = 1.0 / (sameCnt * 50000 + colorNum);
+    double fitness = 1.0/sameCnt;
     indv.setSameCnt(sameCnt);
     indv.setColorNum(colorNum);
     return fitness;
@@ -597,23 +624,39 @@ void calFitness(vector<Individual>& population, Individual& best, double& f_max,
         minFit = min(minFit, fitness);
     }
     //如果本代种群中有比最优个体适应度更高的个体，更新best
-    cout << "best indv = " << best.getFitness() << endl;
-    cout << "bestFit = " << bestFit << endl;
+    //cout << "best indv = " << best.getFitness() << endl;
+    //cout << "bestFit = " << bestFit << endl;
     if (bestFit != best.getFitness()) {
         best = population[bestIdx];
     }
     //根据适应度，从大到小排序种群，并根据移民比率修改flag
     sort(population.begin(), population.end(), [](Individual& a, Individual& b) {return a.getFitness() > b.getFitness(); });
-    for (int i = 0; i <= POP_SIZE * 10 / 100; i++) {
-        population[i].setSpecFlag(1);
-        //cout << population[i].getFitness() << endl;
-    }
+    //for (int i = 0; i <= POP_SIZE * 10 / 100; i++) {
+    //    population[i].setSpecFlag(1);
+          //cout << population[i].getFitness() << endl;
+    //}
+    
     //记录最优个体
     f_max = maxFit;
     //population[maxIdx].setSpecFlag(1);
     //记录最差个体
     f_min = minFit;
     //population[minIdx].setSpecFlag(2);
+}
+
+/*
+* 变异操作，量子非门
+*/
+void mutation(vector<Individual>& population) {
+    for (int i = POP_SIZE - 1; i >= POP_SIZE - POP_SIZE / 10; i--) {
+        population[i] = Individual();
+        /*for (int j = 0; j < CHROM_LEN; j++) {
+            swap(population[i].getChrom()[j].alpha, population[i].getChrom()[j].beta);
+            cout << i << " a = " << population[i].getChrom()[j].alpha << endl;
+            cout << i << " b = " << population[i].getChrom()[j].beta << endl;
+        }*/
+        
+    }
 }
 
 void printPopulation(vector<Individual>& pop) {
@@ -632,11 +675,11 @@ void quantumAlgorithm() {
     //初始化种群
     initPop(POP_SIZE, CHROM_LEN, population, 0);
     //对种群进行一次测量，得到二进制编码
-    //collapse(population);
-    //计算适应度
-    //double f_max = 0;
-    //double f_min = 0;
-    //calFitness(population, best, f_max, f_min);
+    collapse(population);
+    //计算适应度，找出最优个体后再迭代进化
+    double f_max = 0;
+    double f_min = 0;
+    calFitness(population, best, f_max, f_min);
     //进化迭代
     for (int gen = 0; gen < MAX_GEN; gen++) {
         cout << "当前进化代数： " << gen << endl;
@@ -648,10 +691,17 @@ void quantumAlgorithm() {
         calFitness(population, best, f_max, f_min);
         //量子旋转门
         qGateAdaptive(population, best, f_max, f_min);
+        //qGateRAS_1(population, best);
         //qGateRAS_2(population, best);
-        //qGateRAS_2(population, best);
+        mutation(population);
+
+        //printPopulation(population);
+        cout << "##############################\n";
         cout << "best chrom:\n" << best.toString() << endl;
+        cout << "##############################\n";
     }
+    cout << "--------------------------\n";
+    printPopulation(population);
 }
 
 int main()

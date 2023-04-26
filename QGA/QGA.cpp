@@ -93,7 +93,7 @@ void qGateRAS_1(vector<Individual>& population, Individual& best) {
                 delta = 0;
                 s = 0;
             }
-            else if ((x == '0' && b == '1') || (curFit < bestFit)) {
+            else if ((x == '0' && b == '1') && (curFit < bestFit)) {
                 delta = 0;
                 s = 0;
             }
@@ -208,7 +208,7 @@ void qGateRAS_2(vector<Individual>& population, Individual& best) {
                 delta = 0;
                 s = 0;
             }
-            else if ((x == '0' && b == '1') || ( curFit < bestFit)) {
+            else if ((x == '0' && b == '1') && ( curFit < bestFit)) {
                 delta = 0.01 * PI;
                 if (alpha * beta > 0) {
                     s = 1;
@@ -313,7 +313,7 @@ void qGateAdaptive(vector<Individual>& population, Individual& best, double& f_m
                 delta = 0;
                 s = 0;
             }
-            else if ((x == '0' && b == '1') || (curFit < bestFit)) {
+            else if ((x == '0' && b == '1') && (curFit < bestFit)) {
                 delta = theta;
                 if (alpha * beta > 0) {
                     s = 1;

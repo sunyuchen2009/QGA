@@ -12,16 +12,16 @@
 #include <set>
 using namespace std;
 
-const int MAX_GEN = 100;					//最大迭代次数
-const int POP_SIZE = 40;					//种群大小
-const int GENE_NUM = 25;					//基因个数，即变量的个数
-const int GENE_LEN = 5;						//每个基因的编码长度，即每个变量的二进制编码长度
+const int MAX_GEN = 500;					//最大迭代次数
+const int POP_SIZE = 200;					//种群大小
+const int GENE_NUM = 5;						//基因个数，即变量的个数
+const int GENE_LEN = 3;						//每个基因的编码长度，即每个变量的二进制编码长度
 const int CHROM_LEN = GENE_NUM * GENE_LEN;	//个体的二进制编码长度
 const double MIGRATE_RATE = 0.1;			//移民比率
 const double INIT_AMPLITUDE = 1 / sqrt(2);	//根号二分之一常量，用于初始化种群
 const double PI = M_PI;						//Pi常量
 const double K1 = 0.001 * PI;				//最小旋转角
-const double K2 = 0.05 * PI;				//最大旋转角
+const double K2 = 0.008 * PI;				//最大旋转角
 const double EPSLION = 0.1;					//H-ep门
 
 struct qubit {
@@ -53,7 +53,7 @@ public:
 			qubit initQ = qubit();
 			mChrom[i] = initQ;
 		}
-		this->mFitness = -1.0;
+		this->mFitness = INT_MIN;
 		this->mBinary = "";
 		this->mGenesDec.resize(GENE_NUM, 0);
 		this->mSpecFlag = 0;
@@ -114,17 +114,18 @@ public:
 	}
 	string toString() {
 		string ans = "";
-		////打印α
-		//ans += "qubit alpha :";
-		//for (qubit q : mChrom) {
-		//	ans += to_string(q.alpha);
-		//}
-		//ans += "\n";
-		////打印β
-		//ans += "qubit beta :";
-		//for (qubit q : mChrom) {
-		//	ans += to_string(q.beta);
-		//}
+		//打印α
+		ans += "qubit alpha :";
+		for (qubit q : mChrom) {
+			ans += to_string(q.alpha) + " ";
+		}
+		ans += "\n";
+		//打印β
+		ans += "qubit beta :";
+		for (qubit q : mChrom) {
+			ans += to_string(q.beta) + " ";
+		}
+		ans += '\n';
 		for (int i = 0; i < mGenesDec.size(); i++) {
 			ans += "x" + to_string(i) + " = " + to_string(mGenesDec[i]) + "\n";
 		}
