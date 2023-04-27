@@ -10,12 +10,13 @@
 #include <string>
 #include <float.h>
 #include <set>
+#include <unordered_set>
 using namespace std;
 
-const int MAX_GEN = 500;					//最大迭代次数
+const int MAX_GEN = 50;					//最大迭代次数
 const int POP_SIZE = 200;					//种群大小
-const int GENE_NUM = 5;						//基因个数，即变量的个数
-const int GENE_LEN = 3;						//每个基因的编码长度，即每个变量的二进制编码长度
+const int GENE_NUM = 25;						//基因个数，即变量的个数
+const int GENE_LEN = 4;						//每个基因的编码长度，即每个变量的二进制编码长度
 const int CHROM_LEN = GENE_NUM * GENE_LEN;	//个体的二进制编码长度
 const double MIGRATE_RATE = 0.1;			//移民比率
 const double INIT_AMPLITUDE = 1 / sqrt(2);	//根号二分之一常量，用于初始化种群
@@ -24,17 +25,20 @@ const double K1 = 0.001 * PI;				//最小旋转角
 const double K2 = 0.008 * PI;				//最大旋转角
 const double EPSLION = 0.1;					//H-ep门
 
+//量子比特
 struct qubit {
 	double alpha;
 	double beta;
 	qubit() : alpha(INIT_AMPLITUDE), beta(INIT_AMPLITUDE) {}
 	qubit(double a, double b) : alpha(a), beta(b) {}
 };
+//个体基因范围
 struct range {
 	double floor;
 	double ceil;
 	range(double x, double y) : floor(x), ceil(y) {}
 };
+
 
 class Individual {
 private:
@@ -112,6 +116,18 @@ public:
 	void setBinary(const string binary) {
 		this->mBinary = binary;
 	}
+	//获得当前个体与tarIndv个体之间的海明距离
+	int getHammingDis(Individual& tarIndv) {
+		string curBin = this->mBinary;
+		string tarBin = tarIndv.getBinary();
+		int ans = 0;
+		for (int i = 0; i < CHROM_LEN; i++) {
+			if (curBin[i] != tarBin[i]) {
+				ans++;
+			}
+		}
+		return ans;
+	}
 	string toString() {
 		string ans = "";
 		//打印α
@@ -136,6 +152,27 @@ public:
 		ans += "\n";
 		//打印二进制编码
 		ans += "mBinary = " + mBinary + "\n";
+		return ans;
+	}
+};
+
+//禁忌表item
+struct tabuItem {
+	pair<int, int> vertexs;	//对换的两个顶点位置
+	double fitDiff;			//对换后相较原个体提升的适应度
+	Individual newIndv;
+	tabuItem(pair<int, int> v, double diff, Individual indv) : vertexs(v), fitDiff(diff), newIndv(indv) {}
+	string toString() {
+		string ans;
+		ans += "i = ";
+		ans += to_string(vertexs.first / GENE_LEN);
+		ans += '\n';
+		ans += "j = ";
+		ans += to_string(vertexs.second / GENE_LEN);
+		ans += '\n';
+		ans += "fit diff = ";
+		ans += to_string(fitDiff);
+		ans += '\n';
 		return ans;
 	}
 };
