@@ -1,10 +1,15 @@
 #pragma once
 #define _USE_MATH_DEFINES 
-#define NORMAL 0	  //普通个体
-#define POP_BEST 1	  //种群中最优个体
-#define POP_WORST 2	  //种群中最差个体
-#define GA_FIT 0
-#define TS_FIT 1
+#define NORMAL 0	    //普通个体
+#define POP_BEST 1	    //种群中最优个体
+#define POP_WORST 2	    //种群中最差个体
+#define GA_FIT 0		//遗传算法适应度计算
+#define TS_FIT 1		//禁忌搜索适应度计算
+#define UNITARY_FUNC 0
+#define SHAFFER_FUNC 1
+#define SHUBERT_FUNC 2
+#define HUMPBACK_FUNC 3
+#define DEJONES_FUNC 4
 
 #include <cmath>
 #include <vector>
@@ -19,11 +24,11 @@
 #include <unordered_set>
 using namespace std;
 
-const int MAX_GEN = 5000;							//最大迭代次数
+const int MAX_GEN = 200;							//最大迭代次数
 const int TABU_GEN = 10;							//禁忌搜索最大迭代次数
 const int POP_SIZE = 200;							//种群大小
-const int GENE_NUM = 2;							//基因个数，即变量的个数
-const int GENE_LEN = 25;								//每个基因的编码长度，即每个变量的二进制编码长度
+const int GENE_NUM = 36;								//基因个数，即变量的个数
+const int GENE_LEN = 5;							//每个基因的编码长度，即每个变量的二进制编码长度
 const int CHROM_LEN = GENE_NUM * GENE_LEN;			//个体的二进制编码长度
 const double MIGRATE_RATE = 0.1;					//移民比率
 const double INIT_AMPLITUDE = 1 / sqrt(2);			//根号二分之一常量，用于初始化种群
@@ -33,6 +38,7 @@ const double K2 = 0.008 * PI;						//最大旋转角
 const double EPSLION = 0.1;							//H-ep门
 
 static vector<pair<int, int>> GCP_EDGE;				//无向图边集合
+static vector<pair<double, double>> TSP_CITIES;		//旅行商城市坐标
 
 //量子比特
 struct qubit {
