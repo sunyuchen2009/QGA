@@ -1,4 +1,4 @@
-﻿#include "GCP_QGA.h"
+﻿#include "PACK_QGA.h"
 using namespace std;
 
 //生成[0, 1]之间的随机数
@@ -193,7 +193,7 @@ void qGateAdaptive(vector<Individual>& population, Individual& best, double& f_m
             cout << "b = " << b << '\n';
             cout << "s = " << s << '\n';
             cout << "a * b = " << alpha * beta << '\n';*/
-            
+
             if (e == 0) {
                 //H-ep门
                 if (alpha * alpha <= EPSLION && beta * beta >= 1 - EPSLION) {
@@ -237,170 +237,6 @@ vector<double> decodeBinary(string binary, vector<range> bound) {
 }
 
 /*
-* Travelling Salesman Problem
-* @param indv: 个体解
-* @param cities: 城市坐标
-*/
-double tspFunc(Individual& indv, vector<pair<double, double>> cities) {
-    string binary = indv.getBinary();
-    vector<double> x(GENE_NUM, 0);
-    vector<range> bound = { GENE_NUM, range(0, 13) };
-    set<double> used;
-
-    for (int i = 0; i < binary.size(); i += GENE_LEN) {
-        int index = i / GENE_LEN;
-        string curGene = binary.substr(i, GENE_LEN);
-        int var = stoi(curGene, nullptr, 2);
-        //将变量值映射到对应的range区间
-        var = bound[index].floor + var / (pow(2, GENE_LEN) - 1) * (bound[index].ceil - bound[index].floor);
-        x[index] = static_cast<double>(var);
-        used.emplace(x[index]);
-        //cout << "x" << index << " = " << x[index] << endl;
-    }
-    indv.setGeneDec(x);
-    
-    //当前解中总共经过的城市个数，用于非法判定
-    int usedCity = used.size();
-
-    double fitness = INT_MIN;
-    //过滤掉非法解
-    if (usedCity == GENE_NUM) {
-        for (int i = 0; i < x.size() - 1; i++) {
-            fitness += sqrt( pow(cities[x[i]].first - cities[x[i + 1]].first, 2)
-                + pow(cities[x[i]].second - cities[x[i + 1]].second, 2) );
-        }
-        fitness = -fitness;
-    }
-    
-    return fitness;
-}
-
-/*
-* 优化测试函数
-* @param binary：个体的二进制编码
-*/
-double objFunc(Individual& indv, int func) {
-    string binary = indv.getBinary();
-    vector<double> x(GENE_NUM); //各个变量的数组
-    vector<range> bound;
-    double fitness = 0.0;
-    switch (func)
-    {
-        //一元多峰值函数
-    case UNITARY_FUNC:
-    {
-        bound = { range(-1.0, 2.0) };
-        x = decodeBinary(binary, bound);
-        fitness = x[0] * sin(10.0 * PI * x[0]) + 2.0;
-        break;
-    }
-        //Shaffer函数
-    case SHAFFER_FUNC:
-    {
-        bound = { range(-10, 10), range(-10, 10) };
-        x = decodeBinary(binary, bound);
-        fitness = 0.5 - (pow(sin(sqrt(x[0] * x[0] + x[1] * x[1])), 2) - 0.5) / (pow(1 + 0.001 * (x[0] * x[0] + x[1] * x[1]), 2));
-        break;
-    }
-        //驼峰函数
-    case HUMPBACK_FUNC:
-    {
-        bound = { range(-3, 3), range(-2, 2) };
-        x = decodeBinary(binary, bound);
-        fitness = -((4.0 - 2.1 * x[0] * x[0] + pow(x[0], 4) / 3.0) * x[0] * x[0] + x[0] * x[1] - 4.0 * x[1] * x[1] * (1 - x[1] * x[1]));
-        break;
-    }
-        //Shubert函数，有760个局部最优值
-    case SHUBERT_FUNC:
-    {
-        bound = { range(-10, 10), range(-10, 10) };
-        x = decodeBinary(binary, bound);
-        double firstTemp = 0.0;
-        double secondTemp = 0.0;
-        for (int i = 1; i <= 5; i++) {
-            firstTemp += i * cos((i + 1) * x[0] + i);
-            secondTemp += i * cos((i + 1) * x[1] + i);
-        }
-        fitness = -firstTemp * secondTemp;
-        break;
-    }
-        //De Jones函数
-    case DEJONES_FUNC: 
-    {
-        bound = { range(-65.536, 65.536), range(-65.536, 65.536) };
-        x = decodeBinary(binary, bound);
-        vector<vector<double>> arg = { {-32, 16, 0, 16, 32, -32, 16, 0, 16, 32, -32, 16, 0, 16, 32, -32, 16, 0, 16, 32, -32, 16, 0, 16, 32},
-                                    {-32, -32, -32, -32, -32, -16, -16, -16, -16, -16, 0, 0, 0, 0, 0, 16, 16, 16, 16, 16, 32, 32, 32, 32, 32} };
-        
-
-        for (int j = 0; j < 25; j++) {
-            double firstTemp = 0.0;
-            for (int i = 0; i < 2; i++) {
-                firstTemp += pow(x[i] - arg[i][j], 6);
-            }
-            fitness += 1.0 / (j + firstTemp);
-        }
-        fitness = 0.002 + fitness;
-        break;
-    }
-    default:
-        break;
-    }
-    
-    indv.setGeneDec(x);
-    return fitness;
-}
-
-/*
-* Gragh Coloring Problem Fitness:
-* queen5_5: 25个顶点，320条边
-* queen8_12: 96个顶点，2736条边
-* @param indv: 个体解
-* @param flag: 区分QGA适应函数与TS适应函数
-*/
-double gcpFunc(Individual& indv, int flag, vector<pair<int, int>>& edge) {
-    string binary = indv.getBinary();
-    vector<double> x(GENE_NUM, 0);
-    vector<range> bound = { GENE_NUM, range(0, 20) };
-    set<double> colors;
-
-    for (int i = 0; i < binary.size(); i += GENE_LEN) {
-        int index = i / GENE_LEN;
-        string curGene = binary.substr(i, GENE_LEN);
-        int var = stoi(curGene, nullptr, 2);
-        //将变量值映射到对应的range区间
-        var = bound[index].floor + var / (pow(2, GENE_LEN) - 1) * (bound[index].ceil - bound[index].floor);
-        x[index] = static_cast<double>(var);
-        colors.emplace(x[index]);
-        //cout << "x" << index << " = " << x[index] << endl;
-    }
-    indv.setGeneDec(x);
-    //相邻顶点颜色相同的顶点个数
-    int sameCnt = 0;
-    //使用的颜色种数
-    int colorNum = colors.size();
-    for (auto& e : edge) {
-        if (x[e.first] == x[e.second]) {
-            sameCnt++;
-        }
-    }
-
-    double fitness = 0.0;
-    if (flag == TS_FIT) {
-         fitness = -(sameCnt * 10 + colorNum);
-    }
-    else if(flag == GA_FIT)
-    {
-         fitness = -(sameCnt + colorNum * 10);
-    }
-    
-    indv.setSameCnt(sameCnt);
-    indv.setColorNum(colorNum);
-    return fitness;
-}
-
-
-/*
 * 0-1背包问题
 * @param indv: 个体解
 * @param weight: 物品重量
@@ -414,7 +250,7 @@ double packFunc(Individual& indv, vector<int> weight, vector<int> value) {
         int index = i / GENE_LEN;
         string curGene = binary.substr(i, GENE_LEN);
         int var = stoi(curGene, nullptr, 2);
-        
+
         //1代表选，0代表不选
         x[index] = static_cast<double>(var);
         //cout << "x" << index << " = " << x[index] << endl;
@@ -423,11 +259,11 @@ double packFunc(Individual& indv, vector<int> weight, vector<int> value) {
 
     double fitness = 0.0;
     double weightTemp = 0.0;
-    for(int i = 0; i < weight.size(); i++) {
+    for (int i = 0; i < weight.size(); i++) {
         weightTemp += x[i] * weight[i];
     }
     //cout << "wei = " << weightTemp << endl;
-    
+
     indv.setColorNum(weightTemp);
     for (int i = 0; i < value.size(); i++) {
         fitness += x[i] * value[i];
@@ -436,7 +272,7 @@ double packFunc(Individual& indv, vector<int> weight, vector<int> value) {
     if (weightTemp > 282) {
         fitness -= 100 * (weightTemp - 282);
     }
-    
+
     return fitness;
 }
 
@@ -456,10 +292,7 @@ void calFitness(vector<Individual>& population, Individual& best, double& f_max,
     int maxIdx = 0;  //f_max位置
     int minIdx = 0;  //f_min位置
     for (int i = 0; i < population.size(); i++) {
-        //double fitness = objFunc(population[i], SHUBERT_FUNC);
         double fitness = packFunc(population[i], PACK_WEIGHT, PACK_VAL);
-        //double fitness = tspFunc(population[i], TSP_CITIES);
-        //double fitness = gcpFunc(population[i], GA_FIT, GCP_EDGE);
         //记录最优个体
         bestIdx = (fitness >= bestFit) ? i : bestIdx;
         bestFit = max(bestFit, fitness);
@@ -483,7 +316,7 @@ void calFitness(vector<Individual>& population, Individual& best, double& f_max,
     //    population[i].setSpecFlag(1);
           //cout << population[i].getFitness() << endl;
     //}
-    
+
     //记录最优个体
     f_max = maxFit;
     //population[maxIdx].setSpecFlag(1);
@@ -505,7 +338,7 @@ void mutation(vector<Individual>& population) {
             cout << i << " a = " << population[i].getChrom()[j].alpha << endl;
             cout << i << " b = " << population[i].getChrom()[j].beta << endl;
         }*/
-        
+
     }
 }
 
@@ -529,43 +362,38 @@ void tabu(vector<Individual>& population, Individual& best) {
         mutation(population);
         return;
     }
-    return;
+    // return;
     //建立禁忌表
     deque<tabuItem> tabuList(10);
-    if (best.getSameCnt() < 10) {
-        tabuList.resize(20);
-    }
 
     //将best作为初始解，迭代局部最优
     Individual tempChrom = Individual();
     vector<tabuItem> tabuTemp;  //这里用于存储best所有对换位置结果
 
-    //若当前最优个体sameCnt不为0，开始迭代局部寻优
-    if (best.getSameCnt() == 0) {
-        return;
-    }
     for (int m = 0; m < TABU_GEN; m++) {
         cout << "Tabu search 代数：" << m << '\n';
         string bestBin = best.getBinary();
         double bestFit = best.getFitness();
         //两两交换当前best的两个顶点
-        for (int i = 0; i < CHROM_LEN; i += GENE_LEN) {
-            for (int j = i + GENE_LEN; j < CHROM_LEN; j += GENE_LEN) {
-                //交换两个基因
-                for (int k = j; k < j + GENE_LEN; k++) {
-                    swap(bestBin[i], bestBin[k]);
+        for (int i = 0; i < CHROM_LEN; i ++) {
+            if (bestBin[i] == '1') {
+                for (int j = 0; j < CHROM_LEN; j++) {
+                    if (bestBin[j] == '0') {
+                        swap(bestBin[i], bestBin[j]);
+                        tempChrom.setBinary(bestBin);
+                        //判定对换后的适应度
+                        double fitness = packFunc(tempChrom, PACK_WEIGHT, PACK_VAL);
+                        tempChrom.setFitness(fitness);
+                        fitness = fitness - bestFit;
+                        tabuItem item = tabuItem(pair<int, int>(i, j), fitness, tempChrom);
+                        tabuTemp.push_back(item);
+                        //恢复best
+                        bestBin = best.getBinary();
+                    }
+                    else {
+                        continue;
+                    }
                 }
-                tempChrom.setBinary(bestBin);
-                //判定对换后的适应度
-                //double fitness = gcpFunc(tempChrom, TS_FIT, GCP_EDGE);
-                double fitness = packFunc(tempChrom, PACK_WEIGHT, PACK_VAL);
-                //double fitness = objFunc(tempChrom, SHUBERT_FUNC);
-                tempChrom.setFitness(fitness);
-                fitness = fitness - bestFit;
-                tabuItem item = tabuItem(pair<int, int>(i, j), fitness, tempChrom);
-                tabuTemp.push_back(item);
-                //恢复best
-                bestBin = best.getBinary();
             }
         }
         //将所有交换后适应度改变的结果从大到小排序
@@ -595,10 +423,6 @@ void tabu(vector<Individual>& population, Individual& best) {
         cout << "---------------------\n";
         cout << "new best = " << best.toString() << endl;
         cout << "---------------------\n";
-        //当sameCnt为0时直接跳出禁忌搜索
-        if (best.getSameCnt() == 0) {
-            break;
-        }
 
         /*for (auto& x : tabuList) {
             cout << "tabuList = " << x.toString() << '\n';
@@ -611,7 +435,7 @@ void tabu(vector<Individual>& population, Individual& best) {
             cout << x.toString();
         }*/
     }
-    
+
 }
 
 /*
@@ -664,6 +488,7 @@ void quantumAlgorithm() {
     double f_min = 0;
     calFitness(population, best, f_max, f_min);
     //进化迭代
+    int flag = 50;
     for (int gen = 0; gen < MAX_GEN; gen++) {
         cout << "当前进化代数： " << gen << endl;
         //测量种群
@@ -676,13 +501,21 @@ void quantumAlgorithm() {
         qGateAdaptive(population, best, f_max, f_min);
         //qGateRAS_1(population, best);
         //qGateRAS_2(population, best);
-        
-        
+
+
         //printPopulation(population);
         cout << "##############################\n";
         cout << "best chrom:\n" << best.toString() << endl;
-        tabu(population, best);
         cout << "##############################\n";
+        flag--;
+        if (flag == 0) {
+            flag = 50;
+            
+            tabu(population, best);
+            
+        }
+        
+        
         //mutation(population);
     }
     cout << "--------------------------\n";
@@ -691,23 +524,18 @@ void quantumAlgorithm() {
 
 int main()
 {
-    string path = "./graph_data/queen_5_5.txt";
-    //string path = "./graph_data/le450_15c.txt";
-    if (readEdge(GCP_EDGE, path) == 0) {
-        return 0;
-    }
     PACK_VAL = { 25, 24, 92, 30, 42, 22, 30, 70, 75, 60, 76, 96, 16, 59, 47, 94, 29, 99,
                     17, 31, 21, 85, 48, 90, 48, 29, 98, 73, 42, 45, 7, 71, 74, 84, 33, 90,
                     80, 87, 71, 42, 7, 20, 65, 96, 67, 42, 90, 36, 48, 34, 63, 28, 49, 97,
                     78, 71, 86, 4, 75, 58, 23, 51, 70, 18, 35, 70, 43, 72, 94, 79, 64, 92,
                     55, 46, 75, 87, 74, 27, 2, 21, 87, 32, 29, 23, 77, 80, 43, 98, 12, 29,
                     25, 90, 16, 83, 53, 56, 20, 51, 57, 25 };
-    
-    PACK_WEIGHT = { 34, 21, 56, 30, 20, 8, 39, 46, 24, 77, 30, 47, 18, 10, 15, 56, 72, 12, 89, 
-                    67, 60, 48, 73, 25, 31, 72, 86, 32, 70, 99, 21, 83, 95, 24, 73, 30, 77, 
-                    52, 36, 16, 61, 35, 28, 23, 46, 35, 48, 35, 94, 21, 21, 11, 2, 14, 45, 
-                    2, 14, 83, 35, 56, 66, 18, 92, 91, 2, 39, 71, 86, 79, 35, 7, 53, 60, 40, 
-                    40, 83, 30, 47, 10, 10, 69, 49, 94, 50, 93, 51, 62, 23, 89, 26, 13, 
+
+    PACK_WEIGHT = { 34, 21, 56, 30, 20, 8, 39, 46, 24, 77, 30, 47, 18, 10, 15, 56, 72, 12, 89,
+                    67, 60, 48, 73, 25, 31, 72, 86, 32, 70, 99, 21, 83, 95, 24, 73, 30, 77,
+                    52, 36, 16, 61, 35, 28, 23, 46, 35, 48, 35, 94, 21, 21, 11, 2, 14, 45,
+                    2, 14, 83, 35, 56, 66, 18, 92, 91, 2, 39, 71, 86, 79, 35, 7, 53, 60, 40,
+                    40, 83, 30, 47, 10, 10, 69, 49, 94, 50, 93, 51, 62, 23, 89, 26, 13,
                     43, 79, 59, 21, 77, 86, 28, 83, 57 };
     /*PACK_WEIGHT = { 4, 6, 3, 8, 6 };
     PACK_VAL = { 2, 5, 8, 3, 5 };*/
