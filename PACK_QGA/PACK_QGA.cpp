@@ -269,8 +269,8 @@ double packFunc(Individual& indv, vector<int> weight, vector<int> value) {
         fitness += x[i] * value[i];
     }
     indv.setSameCnt(fitness);
-    if (weightTemp > 282) {
-        fitness -= 100 * (weightTemp - 282);
+    if (weightTemp > PACK_MAX) {
+        fitness -= 100 * (weightTemp - PACK_MAX);
     }
 
     return fitness;
@@ -325,27 +325,24 @@ void calFitness(vector<Individual>& population, Individual& best, double& f_max,
     //population[minIdx].setSpecFlag(2);
 }
 
+
 /*
-* 变异操作，量子非门
-* TO-DO：下标问题
+* 量子灾变
+* 初始化种群中部分或全部个体
 */
-void mutation(vector<Individual>& population) {
+void catastrophe(vector<Individual>& population) {
     //for (int i = POP_SIZE - 1; i >= POP_SIZE - POP_SIZE / 2; i--) {
     for (int i = POP_SIZE - 1; i >= 0; i--) {
         population[i] = Individual();
-        /*for (int j = 0; j < CHROM_LEN; j++) {
-            swap(population[i].getChrom()[j].alpha, population[i].getChrom()[j].beta);
-            cout << i << " a = " << population[i].getChrom()[j].alpha << endl;
-            cout << i << " b = " << population[i].getChrom()[j].beta << endl;
-        }*/
-
     }
 }
 
 /*
-* 禁忌搜索算子，用于局部搜索
+* 量子变异
 */
-void tabu(vector<Individual>& population, Individual& best) {
+void mutation(vector<Individual>& population, Individual& best) {
+    //变异概率从0.001到0.01变化
+    double mutaRate = 0.001;
     //评价当前种群的与最优个体间的平均海明距离，最大距离为个体编码长度
     int hammingSum = 0;
     for (auto& x : population) {
@@ -353,32 +350,137 @@ void tabu(vector<Individual>& population, Individual& best) {
     }
     double avgHamming = static_cast<double>(hammingSum) / POP_SIZE;
     cout << "haming = " << avgHamming << '\n';
-    //当平均海明距离小于20% * 最大海明距离时，进行禁忌搜索
-    if (avgHamming > 0.2 * CHROM_LEN) {
+    //当平均海明距离小于40% * 最大海明距离时，变异概率为最低
+    if (avgHamming < 0.4 * CHROM_LEN) {
+        mutaRate = 0.005;
+    }
+    if (avgHamming < 0.2 * CHROM_LEN) {
+        mutaRate = 0.01;
+    }
+    if (avgHamming < 0.1 * CHROM_LEN) {
+        mutaRate = 0.1;
+        catastrophe(population);
         return;
     }
     //当平均海明距离小于10%时，认为算法收敛，进行量子灾变
-    if (avgHamming <= 0.1 * CHROM_LEN) {
-        mutation(population);
+    /*if (avgHamming <= 0.15 * CHROM_LEN) {
+        catastrophe(population);
         return;
+    }*/
+    //catastrophe(population);
+
+    
+    for (int i = 0; i < POP_SIZE; i++) {
+        double pick = srand();
+        //cout << "muta pick = " << pick << endl;
+        if (pick <= mutaRate) {
+            /*vector<qubit> chrom(CHROM_LEN);
+            for (int j = 0; j < CHROM_LEN; j++) {
+                double seed = srand();
+                qubit initQ = qubit(sqrt(seed), sqrt(1 - seed));
+                chrom[j] = initQ;
+            }
+            population[i] = Individual(chrom, 0, "");*/
+            for (int j = 0; j < CHROM_LEN; j++) {
+                swap(population[i].getChrom()[j].alpha, population[i].getChrom()[j].beta);
+            }
+            
+        }
+        
+
+        /*for (int j = 0; j < CHROM_LEN; j++) {
+            swap(population[i].getChrom()[j].alpha, population[i].getChrom()[j].beta);
+            cout << i << " a = " << population[i].getChrom()[j].alpha << endl;
+            cout << i << " b = " << population[i].getChrom()[j].beta << endl;
+        }*/
     }
-    // return;
+}
+
+
+/*
+* 禁忌搜索算子，用于局部搜索
+*/
+void tabu(vector<Individual>& population, Individual& best) {
+    //记录进入禁忌搜索前的最优值
+    static Individual preElite;
+    static int stayFlag = 0;
+    if (preElite.getFitness() != best.getFitness()) {
+        stayFlag = 0;
+    }
+    preElite = best;
+
+    //禁忌搜索实际迭代次数计算
+    int gens = TABU_GEN;
+    if (stayFlag == 0) {
+        gens = TABU_GEN / 4;
+    }
+    else if (stayFlag == 1) {
+        gens = TABU_GEN / 2;
+    }
+    else if (stayFlag > 5) {
+        stayFlag = 0;
+    }
+    
+    //建立最优记录，保证最后输出的是迭代过程中的最优值
+    Individual elite = best;
     //建立禁忌表
-    deque<tabuItem> tabuList(10);
+    deque<tabuItem> tabuList(20);
+
+    //确定扔掉、添加的物品数量，范围是(-4, 4)
+    int flag = -4 + 8 * srand();
+    int temp = flag;
 
     //将best作为初始解，迭代局部最优
-    Individual tempChrom = Individual();
-    vector<tabuItem> tabuTemp;  //这里用于存储best所有对换位置结果
-
-    for (int m = 0; m < TABU_GEN; m++) {
+    for (int m = 0; m < gens; m++) {
         cout << "Tabu search 代数：" << m << '\n';
         string bestBin = best.getBinary();
         double bestFit = best.getFitness();
+        vector<tabuItem> tabuTemp;  //这里用于存储best所有对换位置结果
+
+        cout << "stayFlag = " << stayFlag << '\n';
+        
+        cout << "Flag = " << temp << '\n';
+        //上次未找到更优解，添加一个物品
+        if (stayFlag != 0) {
+            for (auto& x : bestBin) {
+                //决定是多拿一个物品还是丢掉一个物品
+                if (flag > 0) {
+                    //添加物品
+                    if (x == '0') {
+                        x = '1';
+                        flag--;
+                        if (flag <= 0) {
+                            break;
+                        }
+                    }
+                }
+                else if (flag < 0) {
+                    //丢掉物品
+                    if (x == '1') {
+                        x = '0';
+                        flag++;
+                        if (flag >= 0) {
+                            break;
+                        }
+                    }
+                }
+                else {
+                    break;
+                }
+            }
+            
+           
+            best.setBinary(bestBin);
+            double fitness = packFunc(best, PACK_WEIGHT, PACK_VAL);
+            best.setFitness(fitness);
+            bestFit = fitness;
+        }
         //两两交换当前best的两个顶点
         for (int i = 0; i < CHROM_LEN; i ++) {
-            if (bestBin[i] == '1') {
+            if (bestBin[i] == '0') {
                 for (int j = 0; j < CHROM_LEN; j++) {
-                    if (bestBin[j] == '0') {
+                    if (bestBin[j] == '1') {
+                        Individual tempChrom = Individual();
                         swap(bestBin[i], bestBin[j]);
                         tempChrom.setBinary(bestBin);
                         //判定对换后的适应度
@@ -390,9 +492,6 @@ void tabu(vector<Individual>& population, Individual& best) {
                         //恢复best
                         bestBin = best.getBinary();
                     }
-                    else {
-                        continue;
-                    }
                 }
             }
         }
@@ -403,8 +502,9 @@ void tabu(vector<Individual>& population, Individual& best) {
         for (auto& x : tabuTemp) {
             if (find(tabuList.begin(), tabuList.end(), x) != tabuList.end()) {
                 //突破禁忌
-                if (x.fitDiff + bestFit > bestFit) {
+                if (x.fitDiff + bestFit > elite.getFitness()) {
                     best = x.newIndv;
+                    elite = best;           //更新禁忌最优值
                     //将新的选择加入禁忌表
                     tabuList.pop_front();
                     tabuList.push_back(x);
@@ -414,6 +514,9 @@ void tabu(vector<Individual>& population, Individual& best) {
             }
             else {
                 best = x.newIndv;
+                if (best.getFitness() >= elite.getFitness()) {
+                    elite = best;
+                }
                 //将新的选择加入禁忌表
                 tabuList.pop_front();
                 tabuList.push_back(x);
@@ -426,16 +529,24 @@ void tabu(vector<Individual>& population, Individual& best) {
 
         /*for (auto& x : tabuList) {
             cout << "tabuList = " << x.toString() << '\n';
-        }*/
+        }
 
-        /*int flag = 10;
+        int flag = 10;
         for (auto& x : tabuTemp) {
             if (flag <= 0) break;
             flag--;
             cout << x.toString();
         }*/
     }
-
+    //将迭代中最优解赋值给best
+    best = elite;
+    //如果迭代后最优解没有改变，则下次进行禁忌搜索时加入物品
+    if (preElite.getFitness() == best.getFitness()) {
+        stayFlag++;
+    }
+    else {
+        stayFlag = 0;
+    }
 }
 
 /*
@@ -502,21 +613,16 @@ void quantumAlgorithm() {
         //qGateRAS_1(population, best);
         //qGateRAS_2(population, best);
 
-
         //printPopulation(population);
         cout << "##############################\n";
         cout << "best chrom:\n" << best.toString() << endl;
         cout << "##############################\n";
         flag--;
-        if (flag == 0) {
+        if (!flag) {
             flag = 50;
-            
             tabu(population, best);
-            
         }
-        
-        
-        //mutation(population);
+        mutation(population, best);
     }
     cout << "--------------------------\n";
     //printPopulation(population);
@@ -537,8 +643,14 @@ int main()
                     2, 14, 83, 35, 56, 66, 18, 92, 91, 2, 39, 71, 86, 79, 35, 7, 53, 60, 40,
                     40, 83, 30, 47, 10, 10, 69, 49, 94, 50, 93, 51, 62, 23, 89, 26, 13,
                     43, 79, 59, 21, 77, 86, 28, 83, 57 };
-    /*PACK_WEIGHT = { 4, 6, 3, 8, 6 };
-    PACK_VAL = { 2, 5, 8, 3, 5 };*/
+//    PACK_WEIGHT = { 54, 95, 36, 18, 4, 71, 83, 16, 27, 84, 88, 45, 94, 64, 14, 80, 4, 23, 75, 36, 90, 20, 77, 32, 58, 6, 14, 86, 84, 59, 71, 21,
+//30, 22, 96, 49, 81, 48, 37, 28, 6, 84, 19, 55, 88, 38, 51, 52, 79, 55, 70, 53, 64, 99, 61, 86, 1, 64, 32, 60, 42, 45, 34, 22, 49,
+//37, 33, 1, 78, 43, 85, 24, 96, 32, 99, 57, 23, 8, 10, 74, 59, 89, 95, 40, 46, 65, 6, 89, 84, 83, 6, 19, 45, 59, 26, 13, 8, 26, 5,
+//9 };
+//    PACK_VAL = { 297, 295, 293, 292, 291, 289, 284, 284, 283, 283, 281, 280, 279, 277, 276, 275, 273, 264, 260, 257, 250, 236, 236,
+//235, 235, 233, 232, 232, 228, 218, 217, 214, 211, 208, 205, 204, 203, 201, 196, 194, 193, 193, 192, 191, 190, 187, 187,
+//184, 184, 184, 181, 179, 176, 173, 172, 171, 160, 128, 123, 114, 113, 107, 105, 101, 100, 100, 99, 98, 97, 94, 94, 93, 91,
+//80, 74, 73, 72, 63, 63, 62, 61, 60, 56, 53, 52, 50, 48, 46, 40, 40, 35, 28, 22, 22, 18, 15, 12, 11, 6, 5 };
     TSP_CITIES = { {16.47, 96.10}, {16.47, 94.44}, {20.09, 92.54}, {22.39, 93.37}, {25.23, 97.24}, {22.00, 96.05}, {20.47, 97.02},
                     {17.20, 96.29}, {16.30, 97.38}, {14.05, 98.12}, {16.53, 97.38}, {21.52, 95.59}, {19.41, 97.13}, {20.09, 94.55} };
     srand(unsigned(time(NULL)));

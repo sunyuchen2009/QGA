@@ -24,8 +24,9 @@
 #include <unordered_set>
 using namespace std;
 
+const int PACK_MAX = 282;							//背包最大容量
 const int MAX_GEN = 50000;							//最大迭代次数
-const int TABU_GEN = 10;							//禁忌搜索最大迭代次数
+const int TABU_GEN = 50;							//禁忌搜索最大迭代次数
 const int POP_SIZE = 200;							//种群大小
 const int GENE_NUM = 100;							//基因个数，即变量的个数
 const int GENE_LEN = 1;								//每个基因的编码长度，即每个变量的二进制编码长度
@@ -34,7 +35,7 @@ const double MIGRATE_RATE = 0.1;					//移民比率
 const double INIT_AMPLITUDE = 1 / sqrt(2);			//根号二分之一常量，用于初始化种群
 const double PI = M_PI;								//Pi常量
 const double K1 = 0.001 * PI;						//最小旋转角
-const double K2 = 0.008 * PI;						//最大旋转角
+const double K2 = 0.005 * PI;						//最大旋转角
 const double EPSLION = 0.1;							//H-ep门
 
 static vector<pair<int, int>> GCP_EDGE;				//无向图边集合
@@ -158,10 +159,10 @@ public:
 		//for (qubit q : mChrom) {
 		//	ans += to_string(q.beta) + " ";
 		//}
-		ans += '\n';
+		/*ans += '\n';
 		for (int i = 0; i < mGenesDec.size(); i++) {
 			ans += "x" + to_string(i) + " = " + to_string(mGenesDec[i]) + "\n";
-		}
+		}*/
 		//打印适应值
 		ans += "mFitness = " + to_string(mFitness);
 		ans += "\nmSameCnt = " + to_string(mSameCnt);
