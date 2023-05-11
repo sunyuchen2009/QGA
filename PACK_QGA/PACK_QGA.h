@@ -24,11 +24,11 @@
 #include <unordered_set>
 using namespace std;
 
-const int PACK_MAX = 282;							//背包最大容量
+const int PACK_MAX = 1173;							//背包最大容量
 const int MAX_GEN = 50000;							//最大迭代次数
 const int TABU_GEN = 50;							//禁忌搜索最大迭代次数
 const int POP_SIZE = 200;							//种群大小
-const int GENE_NUM = 100;							//基因个数，即变量的个数
+const int GENE_NUM = 80;							//基因个数，即变量的个数
 const int GENE_LEN = 1;								//每个基因的编码长度，即每个变量的二进制编码长度
 const int CHROM_LEN = GENE_NUM * GENE_LEN;			//个体的二进制编码长度
 const double MIGRATE_RATE = 0.1;					//移民比率
@@ -40,8 +40,8 @@ const double EPSLION = 0.1;							//H-ep门
 
 static vector<pair<int, int>> GCP_EDGE;				//无向图边集合
 static vector<pair<double, double>> TSP_CITIES;		//旅行商城市坐标
-static vector<int> PACK_WEIGHT;
-static vector<int> PACK_VAL;
+static vector<double> PACK_WEIGHT;
+static vector<double> PACK_VAL;
 
 //量子比特
 struct qubit {
