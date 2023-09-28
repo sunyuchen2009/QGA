@@ -424,10 +424,11 @@ void tabu(vector<Individual>& population, Individual& best) {
     //建立最优记录，保证最后输出的是迭代过程中的最优值
     Individual elite = best;
     //建立禁忌表
-    deque<tabuItem> tabuList(20);
+    deque<tabuItem> tabuList(35);
 
     //确定扔掉、添加的物品数量，范围是(-4, 4)
     int flag = -4 + 8 * srand();
+    
     int temp = flag;
 
     //将best作为初始解，迭代局部最优
@@ -620,7 +621,7 @@ void quantumAlgorithm() {
         flag--;
         if (!flag) {
             flag = 50;
-            tabu(population, best);
+            //tabu(population, best);
         }
         mutation(population, best);
     }
@@ -630,7 +631,7 @@ void quantumAlgorithm() {
 
 int main()
 {
-    int testNum = 8;
+    int testNum = 9;
     switch (testNum)
     {
     case 1:

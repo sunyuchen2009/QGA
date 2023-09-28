@@ -1,6 +1,6 @@
 /*
-* PACK_QGA
-* 0-1背包（0-1 Knapsack Problem）场景下的量子遗传算法
+* MUD_QGA
+* 多用户检测（MultipleUserDetection）场景下的量子遗传算法
 */
 #pragma once
 #define _USE_MATH_DEFINES 
@@ -28,12 +28,11 @@
 #include <unordered_set>
 using namespace std;
 
-const int PACK_MAX = 3820;							//背包最大容量
-const int MAX_GEN = 2000;							//最大迭代次数
+const int MAX_GEN = 500;							//最大迭代次数
 const int TABU_GEN = 50;							//禁忌搜索最大迭代次数
-const int POP_SIZE = 200;							//种群大小
-const int GENE_NUM = 100;							//基因个数，即变量的个数
-const int GENE_LEN = 1;								//每个基因的编码长度，即每个变量的二进制编码长度
+const int POP_SIZE = 500;							//种群大小
+const int GENE_NUM = 10;							//基因个数，即变量的个数
+const int GENE_LEN = 4;								//每个基因的编码长度，即每个变量的二进制编码长度
 const int CHROM_LEN = GENE_NUM * GENE_LEN;			//个体的二进制编码长度
 const double MIGRATE_RATE = 0.1;					//移民比率
 const double INIT_AMPLITUDE = 1 / sqrt(2);			//根号二分之一常量，用于初始化种群
@@ -42,10 +41,8 @@ const double K1 = 0.001 * PI;						//最小旋转角
 const double K2 = 0.005 * PI;						//最大旋转角
 const double EPSLION = 0.1;							//H-ep门
 
-static vector<pair<int, int>> GCP_EDGE;				//无向图边集合
-static vector<pair<double, double>> TSP_CITIES;		//旅行商城市坐标
-static vector<double> PACK_WEIGHT;
-static vector<double> PACK_VAL;
+static vector<double> DISTANCE;						//节点到基站距离
+static vector<double> GAINS;						//每个节点到基站的信道增益
 
 //量子比特
 struct qubit {
@@ -53,6 +50,12 @@ struct qubit {
 	double beta;
 	qubit() : alpha(INIT_AMPLITUDE), beta(INIT_AMPLITUDE) {}
 	qubit(double a, double b) : alpha(a), beta(b) {}
+	string toString() {
+		string qubitStr;
+		qubitStr += "qubit alpha :" + to_string(alpha) + "\n";
+		qubitStr += "qubit beta :" + to_string(beta) + "\n";
+		return qubitStr;
+	}
 };
 //个体基因范围
 struct range {
@@ -69,8 +72,8 @@ private:
 	string mBinary;			  //二进制编码
 	vector<double> mGenesDec; //每个基因（变量）的十进制表示
 	int mSpecFlag;			  //记录特殊个体的标志（0：普通个体 1：最优个体 2：最差个体）
-	int mSameCnt;			  //当前个体解中相邻顶点有相同颜色的对数，为0才是可用解
-	int mColorNum;			  //当前个体解中使用颜色个数，越小越好
+	bool isPrintQubit = false;
+	bool isPrintGeneDec = false;
 public:
 	Individual() {
 		//无参构造函数，创建初始化种群
@@ -83,8 +86,6 @@ public:
 		this->mBinary = "";
 		this->mGenesDec.resize(GENE_NUM, 0);
 		this->mSpecFlag = 0;
-		this->mSameCnt = -1;
-		this->mColorNum = -1;
 	};
 	Individual(vector<qubit> chrom, double fitness, string binary) {
 		this->mChrom = chrom;
@@ -92,8 +93,6 @@ public:
 		this->mBinary = binary;
 		this->mGenesDec.resize(GENE_NUM, 0);
 		this->mSpecFlag = 0;
-		this->mSameCnt = -1;
-		this->mColorNum = -1;
 	}
 	vector<qubit> getChrom() {
 		return this->mChrom;
@@ -120,18 +119,6 @@ public:
 	void setSpecFlag(int specFlag) {
 		this->mSpecFlag = specFlag;
 	}
-	int getSameCnt() {
-		return this->mSameCnt;
-	}
-	void setSameCnt(int sameCnt) {
-		this->mSameCnt = sameCnt;
-	}
-	int getColorNum() {
-		return this->mColorNum;
-	}
-	void setColorNum(int colorNum) {
-		this->mColorNum = colorNum;
-	}
 	string getBinary() {
 		return this->mBinary;
 	}
@@ -150,27 +137,26 @@ public:
 		}
 		return ans;
 	}
+
+	virtual ~Individual() {}
+
 	string toString() {
 		string ans = "";
-		////打印α
-		//ans += "qubit alpha :";
-		//for (qubit q : mChrom) {
-		//	ans += to_string(q.alpha) + " ";
-		//}
-		//ans += "\n";
-		////打印β
-		//ans += "qubit beta :";
-		//for (qubit q : mChrom) {
-		//	ans += to_string(q.beta) + " ";
-		//}
-		/*ans += '\n';
-		for (int i = 0; i < mGenesDec.size(); i++) {
-			ans += "x" + to_string(i) + " = " + to_string(mGenesDec[i]) + "\n";
-		}*/
+		
+		//打印qubit
+		if (isPrintQubit) {
+			for (auto qbit : mChrom) {
+				ans += qbit.toString();
+			}
+		}
+		//打印十进制描述
+		if (isPrintGeneDec) {
+			for (int i = 0; i < mGenesDec.size(); i++) {
+				ans += "x" + to_string(i) + " = " + to_string(mGenesDec[i]) + "\n";
+			}
+		}
 		//打印适应值
 		ans += "mFitness = " + to_string(mFitness);
-		ans += "\nmSameCnt = " + to_string(mSameCnt);
-		ans += "\nmColorNum = " + to_string(mColorNum);
 		ans += "\n";
 		//打印二进制编码
 		ans += "mBinary = " + mBinary + "\n";

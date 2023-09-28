@@ -1,3 +1,7 @@
+/*
+* GCP_QGA
+* 图着色（Graph Coloring Problem）场景下的量子遗传算法
+*/
 #pragma once
 #define _USE_MATH_DEFINES 
 #define NORMAL 0	    //普通个体

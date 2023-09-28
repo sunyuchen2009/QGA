@@ -1,3 +1,7 @@
+/*
+* PQGA
+* 多宇宙并行量子遗传算法
+*/
 #pragma once
 #define _USE_MATH_DEFINES 
 #define NORMAL 0	  //普通个体
