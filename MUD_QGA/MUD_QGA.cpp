@@ -1,32 +1,33 @@
-#include "MUD_QGA.h"
+ï»¿#include "MUD_QGA.h"
 using namespace std;
 
-//Éú³É[0, 1]Ö®¼äµÄËæ»úÊı
+/*
+* ç”Ÿæˆ[0, 1]ä¹‹é—´çš„éšæœºæ•°
+*/
 double srand() {
     int N = rand() % 999;
-    double random = static_cast<double>(N) / 1000.0;;//Ëæ»ú²úÉú0µ½1µÄĞ¡Êı
-    //cout << random << endl;
+    double random = static_cast<double>(N) / 1000.0;;//éšæœºäº§ç”Ÿ0åˆ°1çš„å°æ•°
     return random;
 }
 
 /*
-* ³õÊ¼»¯ÖÖÈº£¬Ê¹ÓÃÁ¿×Ó±ÈÌØ±àÂë
-* @param M ÖÖÈº´óĞ¡
-* @param N Ã¿¸ö»ùÒòµÄÁ¿×Ó±ÈÌØ±àÂë³¤¶È
-* @param strategyFlag ³õÊ¼»¯²ßÂÔ£º0£¨Ä¬ÈÏÁ½¸öÁ¿×ÓÌ¬µÈ¸ÅÂÊ£©
-                                  1£¨Ğ¡Éú¾³³õÊ¼»¯²ßÂÔ£© (¦Á, ¦Â) = (sqrt(j / n), sqrt(1 - j / n))
+* åˆå§‹åŒ–ç§ç¾¤ï¼Œä½¿ç”¨é‡å­æ¯”ç‰¹ç¼–ç 
+* @param M ç§ç¾¤å¤§å°
+* @param N æ¯ä¸ªåŸºå› çš„é‡å­æ¯”ç‰¹ç¼–ç é•¿åº¦
+* @param strategyFlag åˆå§‹åŒ–ç­–ç•¥ï¼š0ï¼ˆé»˜è®¤ä¸¤ä¸ªé‡å­æ€ç­‰æ¦‚ç‡ï¼‰
+                                  1ï¼ˆå°ç”Ÿå¢ƒåˆå§‹åŒ–ç­–ç•¥ï¼‰ (Î±, Î²) = (sqrt(j / n), sqrt(1 - j / n))
 */
 void initPop(int M, int N, vector<Individual>& population, int strategyFlag) {
     switch (strategyFlag)
     {
     case 0:
-        //½«ÖÖÈºÖĞËùÓĞµÄÈ¾É«Ìå³õÊ¼»¯Îª¸ùºÅ¶ş·ÖÖ®Ò»
+        //å°†ç§ç¾¤ä¸­æ‰€æœ‰çš„æŸ“è‰²ä½“åˆå§‹åŒ–ä¸ºæ ¹å·äºŒåˆ†ä¹‹ä¸€
         population.resize(M);
         for (int i = 0; i < M; i++) {
             population[i] = Individual();
         }
         break;
-    case 1: //Ğ¡Éú¾³
+    case 1: //å°ç”Ÿå¢ƒ
         population.resize(M);
         for (int i = 0; i < M; i++) {
             vector<qubit> chrom(CHROM_LEN);
@@ -37,7 +38,7 @@ void initPop(int M, int N, vector<Individual>& population, int strategyFlag) {
             population[i] = Individual(chrom, 0, "");
         }
         break;
-    case 2: //Ëæ»ú³õÊ¼»¯£¬Õë¶ÔTSPÎÊÌâ
+    case 2: //éšæœºåˆå§‹åŒ–ï¼Œé’ˆå¯¹TSPé—®é¢˜
         population.resize(M);
         for (int i = 0; i < M; i++) {
             vector<qubit> chrom(CHROM_LEN);
@@ -55,7 +56,8 @@ void initPop(int M, int N, vector<Individual>& population, int strategyFlag) {
 }
 
 /*
-* ËúËõº¯Êı£¬Íê³É¶ÔÖÖÈºµÄÒ»´Î²âÁ¿
+* å¡Œç¼©å‡½æ•°ï¼Œå®Œæˆå¯¹ç§ç¾¤çš„ä¸€æ¬¡æµ‹é‡
+* @param population: ç§ç¾¤
 */
 void collapse(vector<Individual>& population) {
     for (int i = 0; i < POP_SIZE; i++) {
@@ -63,8 +65,6 @@ void collapse(vector<Individual>& population) {
         for (int j = 0; j < CHROM_LEN; j++) {
             double pick = srand();
             double alpha = population[i].getChrom()[j].alpha;
-            //cout << "pick = " << pick << '\n';
-            //cout << "alpha^2 = " << alpha * alpha << '\n';
 
             if (pick > alpha * alpha) {
                 binTemp += '1';
@@ -74,51 +74,48 @@ void collapse(vector<Individual>& population) {
             }
         }
         population[i].setBinary(binTemp);
-        //Í¬Ê±³õÊ¼»¯specFlag;
-        population[i].setSpecFlag(0);
-        //population[i].setBinary("00010010011010010000");
     }
 }
 
 /*
-* Á¿×ÓĞı×ªÃÅQGate Adaptive
+* é‡å­æ—‹è½¬é—¨QGate Adaptive
 *   x	best 	f(x)>=f(best)	delta	    ab>0	ab<0	a=0	    b=0
 *   0	0		false			0		    0		0		0	    0
 *   0	0		true			0		    0		0		0	    0
-*   0	1		false			¦¨   	    1		-1		0	    +-1
-*   0	1		true			¦¨   	    -1		1		+-1	    0
-*   1	0		false			¦¨   	    -1		1		+-1	    0
-*   1	0		true			¦¨   	    1		-1		0	    +-1
+*   0	1		false			Î˜   	    1		-1		0	    +-1
+*   0	1		true			Î˜   	    -1		1		+-1	    0
+*   1	0		false			Î˜   	    -1		1		+-1	    0
+*   1	0		true			Î˜   	    1		-1		0	    +-1
 *   1	1		false			0		    0		0		0	    0
 *   1	1		true			0		    0		0		0	    0
-* ÆäÖĞ£¬Ğı×ª½Ç¦¨µÄ¼ÆËã¹«Ê½ÈçÏÂ:
-* ¦¨ = K1 + (K2 - K1) * (f_i - f_min) / (f_max - f_min)  [f_min != f_max]
-* ¦¨ = K1                                                [f_min == f_max]
-* f_i¡¢f_max¡¢f_min·Ö±ğ´÷´ú±íµ±Ç°¸öÌåµÄÊÊÓ¦¶È¡¢µ±Ç°ÖÖÈº×îÓÅ¸öÌåÊÊÓ¦¶ÈÒÔ¼°×î²îÊÊÓ¦¶È
-* K1¡¢K2ÎªÁ½¸öÕı³£ÊıÇÒK1 < K2£¬ÓÃÓÚ¿ØÖÆÊÕÁ²ËÙ¶È
+* å…¶ä¸­ï¼Œæ—‹è½¬è§’Î˜çš„è®¡ç®—å…¬å¼å¦‚ä¸‹:
+* Î˜ = K1 + (K2 - K1) * (f_i - f_min) / (f_max - f_min)  [f_min != f_max]
+* Î˜ = K1                                                [f_min == f_max]
+* f_iã€f_maxã€f_minåˆ†åˆ«æˆ´ä»£è¡¨å½“å‰ä¸ªä½“çš„é€‚åº”åº¦ã€å½“å‰ç§ç¾¤æœ€ä¼˜ä¸ªä½“é€‚åº”åº¦ä»¥åŠæœ€å·®é€‚åº”åº¦
+* K1ã€K2ä¸ºä¸¤ä¸ªæ­£å¸¸æ•°ä¸”K1 < K2ï¼Œç”¨äºæ§åˆ¶æ”¶æ•›é€Ÿåº¦
 */
 void qGateAdaptive(vector<Individual>& population, Individual& best, double& f_max, double& f_min) {
     if (f_max == f_min) return;
     const double CONST_ARG = (f_max > f_min) ? (K2 - K1) / (f_max - f_min) : 0;
 
-    double bestFit = best.getFitness();                         //×îÓÅ¸öÌåÊÊÓ¦¶È
+    double bestFit = best.getFitness();                         //æœ€ä¼˜ä¸ªä½“é€‚åº”åº¦
     for (int i = 0; i < POP_SIZE; i++) {
-        //¸ù¾İµ±Ç°¸öÌå¼ÆËãĞı×ª½Ç
+        //æ ¹æ®å½“å‰ä¸ªä½“è®¡ç®—æ—‹è½¬è§’
         double theta = K1 + (population[i].getFitness() - f_min) * CONST_ARG;
-        //¸öÌå±äÒì¸ÅÂÊ£¬Ä¬ÈÏÎª80%
+        //ä¸ªä½“å˜å¼‚æ¦‚ç‡ï¼Œé»˜è®¤ä¸º80%
         double mutationPick = srand();
         if (mutationPick > 1) {
             continue;
         }
         for (int j = 0; j < CHROM_LEN; j++) {
-            double alpha = population[i].getChrom()[j].alpha;   //¦Á
-            double beta = population[i].getChrom()[j].beta;     //¦Â
-            double delta = 0.0;                                 //Ğı×ª½Ç´óĞ¡
-            char x = population[i].getBinary()[j];              //µ±Ç°¸öÌåµÚj¸ö±àÂë
-            char b = best.getBinary()[j];                       //×îÓÅ¸öÌåµÚj¸ö±àÂë
-            int s = 0;                                          //Ğı×ª½Ç·½Ïò£¬¼´Õı¸ººÅ
-            double curFit = population[i].getFitness();         //µ±Ç°¸öÌåÊÊÓ¦¶È
-            //µ±Ç°¸öÌåÓë×îÓÅ¸öÌåÏàÍ¬£¬²»Ğı×ª
+            double alpha = population[i].getChrom()[j].alpha;   //Î±
+            double beta = population[i].getChrom()[j].beta;     //Î²
+            double delta = 0.0;                                 //æ—‹è½¬è§’å¤§å°
+            char x = population[i].getBinary()[j];              //å½“å‰ä¸ªä½“ç¬¬jä¸ªç¼–ç 
+            char b = best.getBinary()[j];                       //æœ€ä¼˜ä¸ªä½“ç¬¬jä¸ªç¼–ç 
+            int s = 0;                                          //æ—‹è½¬è§’æ–¹å‘ï¼Œå³æ­£è´Ÿå·
+            double curFit = population[i].getFitness();         //å½“å‰ä¸ªä½“é€‚åº”åº¦
+            //å½“å‰ä¸ªä½“ä¸æœ€ä¼˜ä¸ªä½“ç›¸åŒï¼Œä¸æ—‹è½¬
             if ((x == '0' && b == '0') || (x == '1' && b == '1')) {
                 delta = 0;
                 s = 0;
@@ -183,19 +180,10 @@ void qGateAdaptive(vector<Individual>& population, Individual& best, double& f_m
                     s = (srand() > 0.5) ? 1 : -1;
                 }
             }
-            double e = s * delta;       //Ğı×ª½Ç
-            /*cout << "-----------------------\n";
-            cout << "old alpha = " << alpha << '\n';
-            cout << "old beta = " << beta << '\n';
-            cout << "cur fit = " << curFit << '\n';
-            cout << "best fit = " << bestFit << '\n';
-            cout << "x = " << x << '\n';
-            cout << "b = " << b << '\n';
-            cout << "s = " << s << '\n';
-            cout << "a * b = " << alpha * beta << '\n';*/
+            double e = s * delta;       //æ—‹è½¬è§’
 
             if (e == 0) {
-                //H-epÃÅ
+                //H-epé—¨
                 if (alpha * alpha <= EPSLION && beta * beta >= 1 - EPSLION) {
                     population[i].setQubitByPos(j, sqrt(EPSLION), sqrt(1 - EPSLION));
                 }
@@ -208,84 +196,72 @@ void qGateAdaptive(vector<Individual>& population, Individual& best, double& f_m
                 double newBeta = alpha * sin(e) + beta * cos(e);
                 population[i].setQubitByPos(j, newAlpha, newBeta);
             }
-            /*cout << "new alpha = " << population[i].getChrom()[j].alpha << '\n';
-            cout << "new beta = " << population[i].getChrom()[j].beta << '\n';
-            cout << "-----------------------\n";*/
         }
     }
-
 }
 
 /*
-* ½âÂë¶ş½øÖÆ±àÂë£¬·µ»ØÊ®½øÖÆ£¬²¢×ªÒÆµ½±äÁ¿ËùÏŞÖÆµÄÇø¼ä
-* @param binary: ¸öÌåµÄ¶ş½øÖÆ±àÂë£¬°üÀ¨¶à¸ö»ùÒò
-* @param bound: ±äÁ¿µÄÉÏÏÂÏŞ
-* @return: ¸÷¸ö»ùÒò£¨±äÁ¿£©µÄÊı×é
+* è§£ç äºŒè¿›åˆ¶ç¼–ç ï¼Œè¿”å›åè¿›åˆ¶ï¼Œå¹¶è½¬ç§»åˆ°å˜é‡æ‰€é™åˆ¶çš„åŒºé—´
+* @param binary: ä¸ªä½“çš„äºŒè¿›åˆ¶ç¼–ç ï¼ŒåŒ…æ‹¬å¤šä¸ªåŸºå› 
+* @param bound: å˜é‡çš„ä¸Šä¸‹é™
+* @return: å„ä¸ªåŸºå› ï¼ˆå˜é‡ï¼‰çš„æ•°ç»„
 */
-vector<double> decodeBinary(string binary, vector<range> bound) {
+vector<double> decodeBinary(string binary, vector<range>& bound) {
     vector<double> x(GENE_NUM);
     for (int i = 0; i < binary.size(); i += GENE_LEN) {
         int index = i / GENE_LEN;
         string curGene = binary.substr(i, GENE_LEN);
         double var = stoi(curGene, nullptr, 2);
-        //½«±äÁ¿ÖµÓ³Éäµ½¶ÔÓ¦µÄrangeÇø¼ä
+        //å°†å˜é‡å€¼æ˜ å°„åˆ°å¯¹åº”çš„rangeåŒºé—´
         var = bound[index].floor + var / (pow(2, GENE_LEN) - 1) * (bound[index].ceil - bound[index].floor);
         x[index] = static_cast<double>(var);
-        //cout << "x" << index << " = " << x[index] << endl;
     }
     return x;
 }
 
 /*
-* ĞÅµÀÈİÁ¿¼ÆËã
-* @param indv: ¸öÌå½â
-* @param weight: ÎïÆ·ÖØÁ¿
-* @param value: ÎïÆ·¼ÛÖµ
+* ä¿¡é“å®¹é‡è®¡ç®—
+* @param indv: ä¸ªä½“è§£
+* @param weight: ç‰©å“é‡é‡
+* @param value: ç‰©å“ä»·å€¼
 */
 double mudFunc(Individual& indv, vector<Individual>& population, vector<double>& gains) {
     string binary = indv.getBinary();
     vector<double> power(GENE_NUM, 0);
 
-    double fitness = 0.0;
+    double fitness = 1.0;
 
-    //½«¶ş½øÖÆ½âÂëÎªÊ®½øÖÆ
-    vector<range> bound = {GENE_NUM, range(0, 0.1)};
-    //¼ÆËãÃ¿¸ö½ÚµãµÄ¹¦ÂÊ·¶Î§
-    power = decodeBinary(binary, bound);
+    //å°†äºŒè¿›åˆ¶è§£ç ä¸ºåè¿›åˆ¶
+    vector<range> bounds = {GENE_NUM, BOUND};
+    //è®¡ç®—æ¯ä¸ªèŠ‚ç‚¹çš„åŠŸç‡èŒƒå›´
+    power = decodeBinary(binary, bounds);
     indv.setGeneDec(power);
 
-    //¼ÆËãg * p
+    //è®¡ç®—g * p
     vector<double> gp(power.size());
     for (int i = 0; i < gp.size(); i++) {
         gp[i] = gains[i] * power[i];
     }
 
     for (int i = 0; i < power.size(); i++) {
-        //¼ÆËãÒÑ¾­±»½âÂëµÄ½ÚµãµÄ¸ÉÈÅ
-        double postNoise = 0.0;
-        double theta = 0.4;
-        for (int j = power.size() - 1; j > i; j--) {
-            postNoise += gp[j];
+        //è®¡ç®—å·²ç»è¢«è§£ç çš„èŠ‚ç‚¹çš„å¹²æ‰°
+        double innerNoise = 0.0;
+        for (int j = 0; j < power.size(); j++) {
+            if (j != i) {
+                innerNoise += gp[j];
+            }
         }
-        postNoise *= theta;
-
-        //¼ÆËãÉĞÎ´±»½âÂëµÄ½Úµã¸ÉÈÅ
-        double preNoise = 0.0;
-        for (int j = 0; j < i; j++) {
-            preNoise += gp[j];
-        }
-
-        //¼ÆËãÃ¿Ò»¸ö½ÚµãµÄÍøÂçÍÌÍÂÁ¿
-        fitness += (gains[i] * power[i]) / (0.05 * 2 + postNoise + preNoise);
+        //è®¡ç®—æ¯ä¸€ä¸ªèŠ‚ç‚¹çš„ç½‘ç»œååé‡
+        fitness *= (1 + gp[i] / (0.0001 + innerNoise));
     }
-    fitness = 2 * log2(1 + fitness);
+    fitness = log2(fitness);
     return fitness;
 }
 
 
 /*
-* ÊÊÓ¦¶È¼ÆËã£¬¼ÆËãÖÖÈºÖĞËùÓĞ¸öÌåµÄÊÊÓ¦¶ÈÖµ
-* @param population: ÖÖÈº
+* é€‚åº”åº¦è®¡ç®—ï¼Œè®¡ç®—ç§ç¾¤ä¸­æ‰€æœ‰ä¸ªä½“çš„é€‚åº”åº¦å€¼
+* @param population: ç§ç¾¤
 */
 void calFitness(vector<Individual>& population, Individual& best, double& f_max, double& f_min) {
     double bestFit = -DBL_MAX;
@@ -294,116 +270,97 @@ void calFitness(vector<Individual>& population, Individual& best, double& f_max,
     if (best.getFitness() != 0) {
         bestFit = best.getFitness();
     }
-    int bestIdx = 0; //×îÓÅ¸öÌåÎ»ÖÃ
-    int maxIdx = 0;  //f_maxÎ»ÖÃ
-    int minIdx = 0;  //f_minÎ»ÖÃ
+    int bestIdx = 0; //æœ€ä¼˜ä¸ªä½“ä½ç½®
+    int maxIdx = 0;  //f_maxä½ç½®
+    int minIdx = 0;  //f_minä½ç½®
     for (int i = 0; i < population.size(); i++) {
         double fitness = mudFunc(population[i], population, GAINS);
-        //¼ÇÂ¼×îÓÅ¸öÌå
+        //è®°å½•æœ€ä¼˜ä¸ªä½“
         bestIdx = (fitness >= bestFit) ? i : bestIdx;
         bestFit = max(bestFit, fitness);
         population[i].setFitness(fitness);
-        //¼ÇÂ¼±¾´úÖĞ×îÓÅ¸öÌå
+        //è®°å½•æœ¬ä»£ä¸­æœ€ä¼˜ä¸ªä½“
         maxIdx = (fitness > maxFit) ? i : maxIdx;
         maxFit = max(maxFit, fitness);
-        //¼ÇÂ¼±¾´úÖĞ×î²î¸öÌå
+        //è®°å½•æœ¬ä»£ä¸­æœ€å·®ä¸ªä½“
         minIdx = (fitness < minFit) ? i : minIdx;
         minFit = min(minFit, fitness);
     }
-    //Èç¹û±¾´úÖÖÈºÖĞÓĞ±È×îÓÅ¸öÌåÊÊÓ¦¶È¸ü¸ßµÄ¸öÌå£¬¸üĞÂbest
-    //cout << "best indv = " << best.getFitness() << endl;
-    //cout << "bestFit = " << bestFit << endl;
+    //å¦‚æœæœ¬ä»£ç§ç¾¤ä¸­æœ‰æ¯”æœ€ä¼˜ä¸ªä½“é€‚åº”åº¦æ›´é«˜çš„ä¸ªä½“ï¼Œæ›´æ–°best
     if (bestFit != best.getFitness()) {
         best = population[bestIdx];
     }
-    //¸ù¾İÊÊÓ¦¶È£¬´Ó´óµ½Ğ¡ÅÅĞòÖÖÈº£¬²¢¸ù¾İÒÆÃñ±ÈÂÊĞŞ¸Äflag
+    //æ ¹æ®é€‚åº”åº¦ï¼Œä»å¤§åˆ°å°æ’åºç§ç¾¤ï¼Œå¹¶æ ¹æ®ç§»æ°‘æ¯”ç‡ä¿®æ”¹flag
     sort(population.begin(), population.end(), [](Individual& a, Individual& b) {return a.getFitness() > b.getFitness(); });
 
-    //¼ÇÂ¼×îÓÅ¸öÌå
+    //è®°å½•æœ€ä¼˜ä¸ªä½“
     f_max = maxFit;
-    //population[maxIdx].setSpecFlag(1);
-    //¼ÇÂ¼×î²î¸öÌå
+    //è®°å½•æœ€å·®ä¸ªä½“
     f_min = minFit;
-    //population[minIdx].setSpecFlag(2);
 }
 
 
 /*
-* Á¿×ÓÔÖ±ä
-* ³õÊ¼»¯ÖÖÈºÖĞ²¿·Ö»òÈ«²¿¸öÌå
+* é‡å­ç¾å˜å‡½æ•°
+* åˆå§‹åŒ–ç§ç¾¤ä¸­éƒ¨åˆ†æˆ–å…¨éƒ¨ä¸ªä½“
+* @param population: ç§ç¾¤
+* @param initLot: ç¾å˜å ç§ç¾¤çš„ä»½é¢ï¼Œ1ä¸ºå…¨ä½“ç¾å˜
 */
-void catastrophe(vector<Individual>& population) {
-    //for (int i = POP_SIZE - 1; i >= POP_SIZE - POP_SIZE / 2; i--) {
-    for (int i = POP_SIZE - 1; i >= 0; i--) {
+void catastrophe(vector<Individual>& population, int initLot) {
+    for (int i = POP_SIZE - 1; i >= POP_SIZE - POP_SIZE * initLot; i--) {
         population[i] = Individual();
     }
 }
 
 /*
-* Á¿×Ó±äÒì
+* é‡å­å˜å¼‚å‡½æ•°
+* æ ¹æ®ç§ç¾¤ä¸­æ‰€æœ‰ä¸ªä½“ä¸æœ€ä¼˜è§£çš„æµ·æ˜è·ç¦»æ§åˆ¶å˜å¼‚æ¦‚ç‡
+* @param population: ç§ç¾¤
+* @param best: æœ€ä¼˜ä¸ªä½“
 */
 void mutation(vector<Individual>& population, Individual& best) {
-    //±äÒì¸ÅÂÊ´Ó0.001µ½0.01±ä»¯
+    //å˜å¼‚æ¦‚ç‡ä»0.001åˆ°0.01å˜åŒ–
     double mutaRate = 0.001;
-    //ÆÀ¼Ûµ±Ç°ÖÖÈºµÄÓë×îÓÅ¸öÌå¼äµÄÆ½¾ùº£Ã÷¾àÀë£¬×î´ó¾àÀëÎª¸öÌå±àÂë³¤¶È
+    //è¯„ä»·å½“å‰ç§ç¾¤çš„ä¸æœ€ä¼˜ä¸ªä½“é—´çš„å¹³å‡æµ·æ˜è·ç¦»ï¼Œæœ€å¤§è·ç¦»ä¸ºä¸ªä½“ç¼–ç é•¿åº¦
     int hammingSum = 0;
     for (auto& x : population) {
         hammingSum += x.getHammingDis(best);
     }
     double avgHamming = static_cast<double>(hammingSum) / POP_SIZE;
     cout << "haming = " << avgHamming << '\n';
-    //µ±Æ½¾ùº£Ã÷¾àÀëĞ¡ÓÚ40% * ×î´óº£Ã÷¾àÀëÊ±£¬±äÒì¸ÅÂÊÎª×îµÍ
+    //å½“å¹³å‡æµ·æ˜è·ç¦»å°äº40% * æœ€å¤§æµ·æ˜è·ç¦»æ—¶ï¼Œå˜å¼‚æ¦‚ç‡ä¸ºæœ€ä½
     if (avgHamming < 0.4 * CHROM_LEN) {
         mutaRate = 0.005;
     }
     if (avgHamming < 0.2 * CHROM_LEN) {
         mutaRate = 0.01;
     }
+    //å½“å¹³å‡æµ·æ˜è·ç¦»å°äº10%æ—¶ï¼Œè®¤ä¸ºç®—æ³•æ”¶æ•›ï¼Œè¿›è¡Œé‡å­ç¾å˜
     if (avgHamming < 0.1 * CHROM_LEN) {
         mutaRate = 0.1;
-        catastrophe(population);
+        catastrophe(population, 1);
         return;
     }
-    //µ±Æ½¾ùº£Ã÷¾àÀëĞ¡ÓÚ10%Ê±£¬ÈÏÎªËã·¨ÊÕÁ²£¬½øĞĞÁ¿×ÓÔÖ±ä
-    /*if (avgHamming <= 0.15 * CHROM_LEN) {
-        catastrophe(population);
-        return;
-    }*/
-    //catastrophe(population);
 
-
+    //æ ¹æ®mutaRateè¿›è¡Œéšæœºå˜å¼‚
     for (int i = 0; i < POP_SIZE; i++) {
         double pick = srand();
-        //cout << "muta pick = " << pick << endl;
         if (pick <= mutaRate) {
-            /*vector<qubit> chrom(CHROM_LEN);
-            for (int j = 0; j < CHROM_LEN; j++) {
-                double seed = srand();
-                qubit initQ = qubit(sqrt(seed), sqrt(1 - seed));
-                chrom[j] = initQ;
-            }
-            population[i] = Individual(chrom, 0, "");*/
             for (int j = 0; j < CHROM_LEN; j++) {
                 swap(population[i].getChrom()[j].alpha, population[i].getChrom()[j].beta);
             }
-
         }
-
-
-        /*for (int j = 0; j < CHROM_LEN; j++) {
-            swap(population[i].getChrom()[j].alpha, population[i].getChrom()[j].beta);
-            cout << i << " a = " << population[i].getChrom()[j].alpha << endl;
-            cout << i << " b = " << population[i].getChrom()[j].beta << endl;
-        }*/
     }
 }
 
 
 /*
-* ½û¼ÉËÑË÷Ëã×Ó£¬ÓÃÓÚ¾Ö²¿ËÑË÷
+* ç¦å¿Œæœç´¢ç®—å­
+* @param population: ç§ç¾¤
+* @param best: ç¦å¿Œæœç´¢çš„åˆå§‹è§£
 */
 void tabu(vector<Individual>& population, Individual& best) {
-    //¼ÇÂ¼½øÈë½û¼ÉËÑË÷Ç°µÄ×îÓÅÖµ
+    //è®°å½•è¿›å…¥ç¦å¿Œæœç´¢å‰çš„æœ€ä¼˜å€¼
     static Individual preElite;
     static int stayFlag = 0;
     if (preElite.getFitness() != best.getFitness()) {
@@ -411,7 +368,7 @@ void tabu(vector<Individual>& population, Individual& best) {
     }
     preElite = best;
 
-    //½û¼ÉËÑË÷Êµ¼Êµü´ú´ÎÊı¼ÆËã
+    //ç¦å¿Œæœç´¢å®é™…è¿­ä»£æ¬¡æ•°è®¡ç®—
     int gens = TABU_GEN;
     if (stayFlag == 0) {
         gens = TABU_GEN / 4;
@@ -423,62 +380,18 @@ void tabu(vector<Individual>& population, Individual& best) {
         stayFlag = 0;
     }
 
-    //½¨Á¢×îÓÅ¼ÇÂ¼£¬±£Ö¤×îºóÊä³öµÄÊÇµü´ú¹ı³ÌÖĞµÄ×îÓÅÖµ
+    //å»ºç«‹æœ€ä¼˜è®°å½•ï¼Œä¿è¯æœ€åè¾“å‡ºçš„æ˜¯è¿­ä»£è¿‡ç¨‹ä¸­çš„æœ€ä¼˜å€¼
     Individual elite = best;
-    //½¨Á¢½û¼É±í
-    deque<tabuItem> tabuList(35);
-
-    //È·¶¨ÈÓµô¡¢Ìí¼ÓµÄÎïÆ·ÊıÁ¿£¬·¶Î§ÊÇ(-4, 4)
-    int flag = -4 + 8 * srand();
-
-    int temp = flag;
-
-    //½«best×÷Îª³õÊ¼½â£¬µü´ú¾Ö²¿×îÓÅ
+    //å»ºç«‹ç¦å¿Œè¡¨
+    deque<tabuItem> tabuList(TABU_LIST_SIZE);
+    //å°†bestä½œä¸ºåˆå§‹è§£ï¼Œè¿­ä»£å±€éƒ¨æœ€ä¼˜
     for (int m = 0; m < gens; m++) {
-        cout << "Tabu search ´úÊı£º" << m << '\n';
+        cout << "Tabu search ä»£æ•°ï¼š" << m << '\n';
         string bestBin = best.getBinary();
         double bestFit = best.getFitness();
-        vector<tabuItem> tabuTemp;  //ÕâÀïÓÃÓÚ´æ´¢bestËùÓĞ¶Ô»»Î»ÖÃ½á¹û
+        vector<tabuItem> tabuTemp;  //è¿™é‡Œç”¨äºå­˜å‚¨bestæ‰€æœ‰å¯¹æ¢ä½ç½®ç»“æœ
 
-        cout << "stayFlag = " << stayFlag << '\n';
-
-        cout << "Flag = " << temp << '\n';
-        //ÉÏ´ÎÎ´ÕÒµ½¸üÓÅ½â£¬Ìí¼ÓÒ»¸öÎïÆ·
-        if (stayFlag != 0) {
-            for (auto& x : bestBin) {
-                //¾ö¶¨ÊÇ¶àÄÃÒ»¸öÎïÆ·»¹ÊÇ¶ªµôÒ»¸öÎïÆ·
-                if (flag > 0) {
-                    //Ìí¼ÓÎïÆ·
-                    if (x == '0') {
-                        x = '1';
-                        flag--;
-                        if (flag <= 0) {
-                            break;
-                        }
-                    }
-                }
-                else if (flag < 0) {
-                    //¶ªµôÎïÆ·
-                    if (x == '1') {
-                        x = '0';
-                        flag++;
-                        if (flag >= 0) {
-                            break;
-                        }
-                    }
-                }
-                else {
-                    break;
-                }
-            }
-
-
-            best.setBinary(bestBin);
-            double fitness = mudFunc(best, population, GAINS);
-            best.setFitness(fitness);
-            bestFit = fitness;
-        }
-        //Á½Á½½»»»µ±Ç°bestµÄÁ½¸ö¶¥µã
+        //ä¸¤ä¸¤äº¤æ¢å½“å‰bestçš„ä¸¤ä¸ªé¡¶ç‚¹
         for (int i = 0; i < CHROM_LEN; i++) {
             if (bestBin[i] == '0') {
                 for (int j = 0; j < CHROM_LEN; j++) {
@@ -486,29 +399,29 @@ void tabu(vector<Individual>& population, Individual& best) {
                         Individual tempChrom = Individual();
                         swap(bestBin[i], bestBin[j]);
                         tempChrom.setBinary(bestBin);
-                        //ÅĞ¶¨¶Ô»»ºóµÄÊÊÓ¦¶È
+                        //åˆ¤å®šå¯¹æ¢åçš„é€‚åº”åº¦
                         double fitness = mudFunc(population[i], population, GAINS);
                         tempChrom.setFitness(fitness);
                         fitness = fitness - bestFit;
                         tabuItem item = tabuItem(pair<int, int>(i, j), fitness, tempChrom);
                         tabuTemp.push_back(item);
-                        //»Ö¸´best
+                        //æ¢å¤best
                         bestBin = best.getBinary();
                     }
                 }
             }
         }
-        //½«ËùÓĞ½»»»ºóÊÊÓ¦¶È¸Ä±äµÄ½á¹û´Ó´óµ½Ğ¡ÅÅĞò
+        //å°†æ‰€æœ‰äº¤æ¢åé€‚åº”åº¦æ”¹å˜çš„ç»“æœä»å¤§åˆ°å°æ’åºï¼Œç»´æŠ¤ç¦å¿Œè¡¨
         sort(tabuTemp.begin(), tabuTemp.end(), [](tabuItem a, tabuItem b) {return a.fitDiff > b.fitDiff; });
 
-        //Ñ¡³ö²»ÔÚtabuListÖĞÇÒÌáÉı×î´óµÄ¶Ô»»²ßÂÔ
+        //é€‰å‡ºä¸åœ¨tabuListä¸­ä¸”æå‡æœ€å¤§çš„å¯¹æ¢ç­–ç•¥
         for (auto& x : tabuTemp) {
             if (find(tabuList.begin(), tabuList.end(), x) != tabuList.end()) {
-                //Í»ÆÆ½û¼É
+                //çªç ´ç¦å¿Œ
                 if (x.fitDiff + bestFit > elite.getFitness()) {
-                    best = x.newIndv;
-                    elite = best;           //¸üĞÂ½û¼É×îÓÅÖµ
-                    //½«ĞÂµÄÑ¡Ôñ¼ÓÈë½û¼É±í
+                    best = x.newIndv;       //æ›´æ–°ç¦å¿Œæœ€ä¼˜å€¼
+                    elite = best;           //æ›´æ–°å…¨å±€æœ€ä¼˜å€¼
+                    //å°†æ–°çš„é€‰æ‹©åŠ å…¥ç¦å¿Œè¡¨
                     tabuList.pop_front();
                     tabuList.push_back(x);
                     break;
@@ -520,30 +433,22 @@ void tabu(vector<Individual>& population, Individual& best) {
                 if (best.getFitness() >= elite.getFitness()) {
                     elite = best;
                 }
-                //½«ĞÂµÄÑ¡Ôñ¼ÓÈë½û¼É±í
+                //å°†æ–°çš„é€‰æ‹©åŠ å…¥ç¦å¿Œè¡¨
                 tabuList.pop_front();
                 tabuList.push_back(x);
                 break;
             }
         }
+        //æœ€åä¸€æ¬¡è¿­ä»£ï¼Œå°†è¿­ä»£ä¸­æœ€ä¼˜è§£eliteèµ‹å€¼ç»™best
+        if (m == gens - 1) {
+            best = elite;
+        }
         cout << "---------------------\n";
         cout << "new best = " << best.toString() << endl;
         cout << "---------------------\n";
-
-        /*for (auto& x : tabuList) {
-            cout << "tabuList = " << x.toString() << '\n';
-        }
-
-        int flag = 10;
-        for (auto& x : tabuTemp) {
-            if (flag <= 0) break;
-            flag--;
-            cout << x.toString();
-        }*/
     }
-    //½«µü´úÖĞ×îÓÅ½â¸³Öµ¸øbest
-    best = elite;
-    //Èç¹ûµü´úºó×îÓÅ½âÃ»ÓĞ¸Ä±ä£¬ÔòÏÂ´Î½øĞĞ½û¼ÉËÑË÷Ê±¼ÓÈëÎïÆ·
+
+    //å¦‚æœè¿­ä»£åæœ€ä¼˜è§£æ²¡æœ‰æ”¹å˜ï¼Œåˆ™åœç•™FlagåŠ ä¸€ï¼Œè°ƒæ•´ä¸‹æ¬¡ç¦å¿Œæœç´¢æ¬¡æ•°
     if (preElite.getFitness() == best.getFitness()) {
         stayFlag++;
     }
@@ -553,32 +458,7 @@ void tabu(vector<Individual>& population, Individual& best) {
 }
 
 /*
-* ¶ÁÈ¡ÎŞÏòÍ¼µÄ±ßÊı¾İ
-* @param edge: ±ß
-* @param path: Í¼µÄtxtÂ·¾¶
-*/
-int readEdge(vector<pair<int, int>>& edge, string path) {
-    ifstream infile;
-    infile.open(path, ios::in);
-    if (!infile.is_open())
-    {
-        cout << "¶ÁÈ¡ÎÄ¼şÊ§°Ü" << endl;
-        return 0;
-    }
-    //¶ÁÈ¡Ã¿Ò»Ìõ±ß£¬²¢´æÈëedge
-    string line;
-    while (getline(infile, line))
-    {
-        auto it = line.find(' ');
-        int first = atoi(line.substr(0, it).c_str()) - 1;
-        int second = atoi(line.substr(it + 1).c_str()) - 1;
-        edge.push_back(pair<int, int>(first, second));
-    }
-    return 1;
-}
-
-/*
-* ´òÓ¡ÖÖÈº
+* æ‰“å°ç§ç¾¤
 */
 void printPopulation(vector<Individual>& pop) {
     for (int i = 0; i < pop.size(); i++) {
@@ -587,31 +467,31 @@ void printPopulation(vector<Individual>& pop) {
 }
 
 /*
-* QGAÖ÷º¯Êı
+* QGAä¸»å‡½æ•°
 */
 void quantumAlgorithm() {
     Individual best;
     vector<Individual> population;
 
-    //³õÊ¼»¯ÖÖÈº
+    //åˆå§‹åŒ–ç§ç¾¤
     initPop(POP_SIZE, CHROM_LEN, population, 0);
-    //¶ÔÖÖÈº½øĞĞÒ»´Î²âÁ¿£¬µÃµ½¶ş½øÖÆ±àÂë
+    //å¯¹ç§ç¾¤è¿›è¡Œä¸€æ¬¡æµ‹é‡ï¼Œå¾—åˆ°äºŒè¿›åˆ¶ç¼–ç 
     collapse(population);
-    //¼ÆËãÊÊÓ¦¶È£¬ÕÒ³ö×îÓÅ¸öÌåºóÔÙµü´ú½ø»¯
+    //è®¡ç®—é€‚åº”åº¦ï¼Œæ‰¾å‡ºæœ€ä¼˜ä¸ªä½“åå†è¿­ä»£è¿›åŒ–
     double f_max = 0;
     double f_min = 0;
     calFitness(population, best, f_max, f_min);
-    //½ø»¯µü´ú
+    //è¿›åŒ–è¿­ä»£
     int flag = 50;
     for (int gen = 0; gen < MAX_GEN; gen++) {
-        cout << "µ±Ç°½ø»¯´úÊı£º " << gen << endl;
-        //²âÁ¿ÖÖÈº
+        cout << "å½“å‰è¿›åŒ–ä»£æ•°ï¼š " << gen << endl;
+        //æµ‹é‡ç§ç¾¤
         collapse(population);
-        //¼ÆËãÊÊÓ¦¶È
+        //è®¡ç®—é€‚åº”åº¦
         double f_max = 0;
         double f_min = 0;
         calFitness(population, best, f_max, f_min);
-        //Á¿×ÓĞı×ªÃÅ
+        //é‡å­æ—‹è½¬é—¨
         qGateAdaptive(population, best, f_max, f_min);
         //qGateRAS_1(population, best);
         //qGateRAS_2(population, best);
@@ -623,7 +503,7 @@ void quantumAlgorithm() {
         flag--;
         if (!flag) {
             flag = 50;
-            //tabu(population, best);
+            tabu(population, best);
         }
         mutation(population, best);
     }
@@ -633,34 +513,53 @@ void quantumAlgorithm() {
 
 int main()
 {
-    //½Úµã×ø±ê
+    /*
+    * Î²   = 0.5
+    * ÏƒÂ²  = 0.05
+    * pmax = 0.1
+    */
+    double beta = 5;
+    double sigma = 0.0001;
+    double pmax = 0.1;
+    //èŠ‚ç‚¹åæ ‡
     vector<pair<double, double>> coords;
 
-    //½Úµãµ½ÖÕ¶ËµÄ¾àÀë
-    DISTANCE = { 16.2182308193243,
-                 79.4284540683907,
-                 31.1215042044805,
-                 52.8533135506213,
-                 16.5648729499781,
-                 60.1981941401637,
-                 26.2971284540144,
-                 65.4079098476782,
-                 68.9214503140008,
-                 74.8151592823709 };
+    //è®¡ç®—æ¯ä¸ªèŠ‚ç‚¹çš„åŠŸç‡å–å€¼èŒƒå›´
+    double Aj = 1 + log(pmax / beta*sigma) / log(beta + 1);
+    double floor = beta * sigma * pow((beta + 1), (Aj + 1));
+    double ceil = pmax;
+    BOUND = range(floor, ceil);
+    cout << BOUND.toString() << endl;
+    
+
+    //èŠ‚ç‚¹åˆ°ç»ˆç«¯çš„è·ç¦»
+    DISTANCE = { 81.4723686393179,
+                90.5791937075619,
+                12.6986816293506,
+                91.3375856139019,
+                63.2359246225410,
+                9.75404049994095,
+                27.8498218867048,
+                54.6881519204984,
+                95.7506835434298,
+                96.4888535199277 };
+    //æ¯ä¸ªèŠ‚ç‚¹çš„ä¿¡é“å¢ç›Š
     GAINS = {
-        0.130052951147251,
-        0.0807473766577741,
-        0.106955489777367,
-        0.0912430068595769,
-        0.129230439684949,
-        0.0877498162562804,
-        0.112499024440491,
-        0.0855918026909817,
-        0.0842587345626009,
-        0.0822099479526409
+        5.54740950894548e-06,
+        4.03678763845922e-06,
+        0.00146502605831966,
+        3.93706579298868e-06,
+        1.18639589518653e-05,
+        0.00323271628650082,
+        0.000138884566867956,
+        1.83417813620838e-05,
+        3.41739835278010e-06,
+        3.33956434986324e-06
     };
     srand(unsigned(time(NULL)));
     quantumAlgorithm();
+
+    
 
     std::cout << "Hello World!\n";
 }

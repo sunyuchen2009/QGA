@@ -30,9 +30,9 @@ using namespace std;
 
 const int MAX_GEN = 500;							//最大迭代次数
 const int TABU_GEN = 50;							//禁忌搜索最大迭代次数
-const int POP_SIZE = 500;							//种群大小
+const int POP_SIZE = 200;							//种群大小
 const int GENE_NUM = 10;							//基因个数，即变量的个数
-const int GENE_LEN = 4;								//每个基因的编码长度，即每个变量的二进制编码长度
+const int GENE_LEN = 8;								//每个基因的编码长度，即每个变量的二进制编码长度
 const int CHROM_LEN = GENE_NUM * GENE_LEN;			//个体的二进制编码长度
 const double MIGRATE_RATE = 0.1;					//移民比率
 const double INIT_AMPLITUDE = 1 / sqrt(2);			//根号二分之一常量，用于初始化种群
@@ -40,9 +40,7 @@ const double PI = M_PI;								//Pi常量
 const double K1 = 0.001 * PI;						//最小旋转角
 const double K2 = 0.005 * PI;						//最大旋转角
 const double EPSLION = 0.1;							//H-ep门
-
-static vector<double> DISTANCE;						//节点到基站距离
-static vector<double> GAINS;						//每个节点到基站的信道增益
+const int TABU_LIST_SIZE = 35;						//tabuList长度
 
 //量子比特
 struct qubit {
@@ -57,13 +55,23 @@ struct qubit {
 		return qubitStr;
 	}
 };
+
 //个体基因范围
 struct range {
 	double floor;
 	double ceil;
+	range(): floor(0.0), ceil(0.0) {}
 	range(double x, double y) : floor(x), ceil(y) {}
+	string toString() {
+		return "floor = " + to_string(floor)
+			+ "\nceil = " + to_string(ceil)
+			+ "\n";
+	}
 };
 
+static range BOUND;									//每个节点的发射功率取值
+static vector<double> DISTANCE;						//节点到基站距离
+static vector<double> GAINS;						//每个节点到基站的信道增益
 
 class Individual {
 private:
@@ -71,9 +79,8 @@ private:
 	double mFitness;		  //适应值
 	string mBinary;			  //二进制编码
 	vector<double> mGenesDec; //每个基因（变量）的十进制表示
-	int mSpecFlag;			  //记录特殊个体的标志（0：普通个体 1：最优个体 2：最差个体）
 	bool isPrintQubit = false;
-	bool isPrintGeneDec = false;
+	bool isPrintGeneDec = true;
 public:
 	Individual() {
 		//无参构造函数，创建初始化种群
@@ -85,15 +92,17 @@ public:
 		this->mFitness = INT_MIN;
 		this->mBinary = "";
 		this->mGenesDec.resize(GENE_NUM, 0);
-		this->mSpecFlag = 0;
 	};
+
 	Individual(vector<qubit> chrom, double fitness, string binary) {
 		this->mChrom = chrom;
 		this->mFitness = fitness;
 		this->mBinary = binary;
 		this->mGenesDec.resize(GENE_NUM, 0);
-		this->mSpecFlag = 0;
 	}
+
+	virtual ~Individual() {}
+
 	vector<qubit> getChrom() {
 		return this->mChrom;
 	}
@@ -112,12 +121,6 @@ public:
 	}
 	void setGeneDec(vector<double> geneDec) {
 		this->mGenesDec = geneDec;
-	}
-	int getSpecFlag() {
-		return this->mSpecFlag;
-	}
-	void setSpecFlag(int specFlag) {
-		this->mSpecFlag = specFlag;
 	}
 	string getBinary() {
 		return this->mBinary;
@@ -138,11 +141,8 @@ public:
 		return ans;
 	}
 
-	virtual ~Individual() {}
-
 	string toString() {
 		string ans = "";
-		
 		//打印qubit
 		if (isPrintQubit) {
 			for (auto qbit : mChrom) {
@@ -196,3 +196,27 @@ struct tabuItem {
 		return ans;
 	}
 };
+
+double srand();
+
+void initPop(int M, int N, vector<Individual>& population, int strategyFlag);
+
+void collapse(vector<Individual>& population);
+
+void qGateAdaptive(vector<Individual>& population, Individual& best, double& f_max, double& f_min);
+
+vector<double> decodeBinary(string binary, vector<range>& bound);
+
+double mudFunc(Individual& indv, vector<Individual>& population, vector<double>& gains);
+
+void calFitness(vector<Individual>& population, Individual& best, double& f_max, double& f_min);
+
+void catastrophe(vector<Individual>& population, int initLot);
+
+void mutation(vector<Individual>& population, Individual& best);
+
+void tabu(vector<Individual>& population, Individual& best);
+
+void printPopulation(vector<Individual>& pop);
+
+void quantumAlgorithm();

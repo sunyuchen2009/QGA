@@ -78,6 +78,8 @@
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <LinkIncremental>true</LinkIncremental>
+    <IncludePath>D:\Anaconda\Lib\site-packages\numpy\core\include;C:\Users\SUN\AppData\Local\Programs\Python\Python39\include;$(IncludePath)</IncludePath>
+    <LibraryPath>C:\Users\SUN\AppData\Local\Programs\Python\Python39\libs;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <LinkIncremental>false</LinkIncremental>
