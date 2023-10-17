@@ -13,6 +13,7 @@
 #include <iostream>
 #include <string>
 #include <float.h>
+#include <thread>
 using namespace std;
 
 const int MAX_GEN = 50;						//最大迭代次数
@@ -27,16 +28,31 @@ const double K1 = 0.001 * PI;				//最小旋转角
 const double K2 = 0.05 * PI;				//最大旋转角
 const double EPSLION = 0.1;					//H-ep门
 
+//量子比特
 struct qubit {
 	double alpha;
 	double beta;
 	qubit() : alpha(INIT_AMPLITUDE), beta(INIT_AMPLITUDE) {}
 	qubit(double a, double b) : alpha(a), beta(b) {}
+	string toString() {
+		string qubitStr;
+		qubitStr += "qubit alpha :" + to_string(alpha) + "\n";
+		qubitStr += "qubit beta :" + to_string(beta) + "\n";
+		return qubitStr;
+	}
 };
+
+//个体基因范围
 struct range {
 	double floor;
 	double ceil;
+	range() : floor(0.0), ceil(0.0) {}
 	range(double x, double y) : floor(x), ceil(y) {}
+	string toString() {
+		return "floor = " + to_string(floor)
+			+ "\nceil = " + to_string(ceil)
+			+ "\n";
+	}
 };
 
 class Individual {
@@ -46,6 +62,8 @@ private:
 	string mBinary;			  //二进制编码
 	vector<double> mGenesDec; //每个基因（变量）的十进制表示
 	int mSpecFlag;			  //记录特殊个体的标志（0：普通个体 1：最优个体 2：最差个体）
+	bool isPrintQubit = false;
+	bool isPrintGeneDec = true;
 public:
 	Individual() {
 		//无参构造函数，创建初始化种群
@@ -99,19 +117,17 @@ public:
 	}
 	string toString() {
 		string ans = "";
-		////打印α
-		//ans += "qubit alpha :";
-		//for (qubit q : mChrom) {
-		//	ans += to_string(q.alpha);
-		//}
-		//ans += "\n";
-		////打印β
-		//ans += "qubit beta :";
-		//for (qubit q : mChrom) {
-		//	ans += to_string(q.beta);
-		//}
-		for (int i = 0; i < mGenesDec.size(); i++) {
-			ans += "x" + to_string(i) + " = " + to_string(mGenesDec[i]) + "\n";
+		//打印qubit
+		if (isPrintQubit) {
+			for (auto qbit : mChrom) {
+				ans += qbit.toString();
+			}
+		}
+		//打印十进制描述
+		if (isPrintGeneDec) {
+			for (int i = 0; i < mGenesDec.size(); i++) {
+				ans += "x" + to_string(i) + " = " + to_string(mGenesDec[i]) + "\n";
+			}
 		}
 		//打印适应值
 		ans += "mFitness = " + to_string(mFitness);

@@ -531,7 +531,11 @@ void quantumAlgorithm() {
 
 int main()
 {
+    clock_t startTime = clock();
     quantumAlgorithm();
+    clock_t endTime = clock();
+    double costTime = (double)(endTime - startTime) / CLOCKS_PER_SEC;
+    cout << "costTime = " << costTime * 1000 << "ms" << endl;
 
     std::cout << "Hello World!\n";
 }

@@ -304,7 +304,7 @@ void qGateRAS_2(vector<Individual>& population, Individual& best) {
 * f_i、f_max、f_min分别戴代表当前个体的适应度、当前种群最优个体适应度以及最差适应度
 * K1、K2为两个正常数且K1 < K2，用于控制收敛速度
 */
-void qGateAdaptive(vector<Individual>& population, Individual& best, double& f_max, double& f_min) {
+void qGateAdaptive(vector<Individual>& population, Individual& best, double f_max, double f_min) {
     const double CONST_ARG = (f_max > f_min) ? (K2 - K1) / (f_max - f_min) : 0;
 
     double bestFit = best.getFitness();                         //最优个体适应度
@@ -463,7 +463,7 @@ double objFuncShaffer(Individual& indv) {
 * 适应度计算，计算种群中所有个体的适应度值
 * @param population: 种群
 */
-void calFitness(vector<Individual>& population, Individual& best, double& f_max, double& f_min) {
+void calFitness(vector<Individual>& population, Individual& best, double f_max, double f_min) {
     double bestFit = -DBL_MAX;
     double maxFit = -DBL_MAX;
     double minFit = DBL_MAX;
@@ -547,6 +547,9 @@ void maQuantumAlgorithm() {
     vector<Individual> u3;
     vector<Individual> u4;
 
+    //建立线程池
+    vector<thread> uThreads(3);
+
     //初始化各个宇宙
     initUniverse(u1, u2, u3, u4);
     //对种群进行一次测量，得到二进制编码
@@ -554,19 +557,29 @@ void maQuantumAlgorithm() {
     collapse(u2);
     collapse(u3);
     collapse(u4);
+    /*uThreads[0] = thread(collapse, ref(u2));
+    uThreads[1] = thread(collapse, ref(u3));
+    uThreads[2] = thread(collapse, ref(u4));
+    uThreads[0].join();
+    uThreads[1].join();
+    uThreads[2].join();*/
+ 
     //计算适应度
-    double f_max1 = 0;
-    double f_min1 = 0;
+    double f_max1 = 0, f_min1 = 0;
+    double f_max2 = 0, f_min2 = 0;
+    double f_max3 = 0, f_min3 = 0;
+    double f_max4 = 0, f_min4 = 0;
     calFitness(u1, best, f_max1, f_min1);
-    double f_max2 = 0;
-    double f_min2 = 0;
     calFitness(u2, best, f_max2, f_min2);
-    double f_max3 = 0;
-    double f_min3 = 0;
     calFitness(u3, best, f_max3, f_min3);
-    double f_max4 = 0;
-    double f_min4 = 0;
     calFitness(u4, best, f_max4, f_min4);
+    /*uThreads[0] = thread(calFitness, ref(u2), ref(best), f_max2, f_min2);
+    uThreads[1] = thread(calFitness, ref(u3), ref(best), f_max3, f_min3);
+    uThreads[2] = thread(calFitness, ref(u4), ref(best), f_max4, f_min4);
+    uThreads[0].join();
+    uThreads[1].join();
+    uThreads[2].join();*/
+
     int flag = 2;
     while (flag--) {
         //各个宇宙进化迭代
@@ -577,35 +590,52 @@ void maQuantumAlgorithm() {
             collapse(u2);
             collapse(u3);
             collapse(u4);
+            /*uThreads[0] = thread(collapse, ref(u2));
+            uThreads[1] = thread(collapse, ref(u3));
+            uThreads[2] = thread(collapse, ref(u4));
+            uThreads[0].join();
+            uThreads[1].join();
+            uThreads[2].join();*/
             //计算适应度
-            double f_max1 = 0;
-            double f_min1 = 0;
+            double f_max1 = 0, f_min1 = 0;
+            double f_max2 = 0, f_min2 = 0;
+            double f_max3 = 0, f_min3 = 0;
+            double f_max4 = 0, f_min4 = 0;
             calFitness(u1, best, f_max1, f_min1);
-            double f_max2 = 0;
-            double f_min2 = 0;
             calFitness(u2, best, f_max2, f_min2);
-            double f_max3 = 0;
-            double f_min3 = 0;
             calFitness(u3, best, f_max3, f_min3);
-            double f_max4 = 0;
-            double f_min4 = 0;
             calFitness(u4, best, f_max4, f_min4);
+            /*uThreads[0] = thread(calFitness, ref(u2), ref(best), f_max2, f_min2);
+            uThreads[1] = thread(calFitness, ref(u3), ref(best), f_max3, f_min3);
+            uThreads[2] = thread(calFitness, ref(u4), ref(best), f_max4, f_min4);
+            uThreads[0].join();
+            uThreads[1].join();
+            uThreads[2].join();*/
             //量子旋转门
             qGateAdaptive(u2, best, f_max2, f_min2);
             qGateAdaptive(u3, best, f_max3, f_min3);
             qGateAdaptive(u4, best, f_max4, f_min4);
             qGateAdaptive(u1, best, f_max1, f_min1);
+            /*uThreads[0] = thread(qGateAdaptive, ref(u2), ref(best), f_max2, f_min2);
+            uThreads[1] = thread(qGateAdaptive, ref(u3), ref(best), f_max3, f_min3);
+            uThreads[2] = thread(qGateAdaptive, ref(u4), ref(best), f_max4, f_min4);
+            uThreads[0].join();
+            uThreads[1].join();
+            uThreads[2].join();*/
             cout << "best chrom:\n" << best.toString() << endl;
         }
         //移民算子
         migration(u1, u2, u3, u4);
     }
-
 }
 
 int main()
 {
+    clock_t startTime = clock();
     maQuantumAlgorithm();
+    clock_t endTime = clock();
+    double costTime = (double)(endTime - startTime) / CLOCKS_PER_SEC;
+    cout << "costTime = " << costTime * 1000 << "ms" << endl;
 
     std::cout << "Hello World!\n";
 }
