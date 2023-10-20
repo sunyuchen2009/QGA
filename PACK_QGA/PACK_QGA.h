@@ -42,8 +42,6 @@ const double K1 = 0.001 * PI;						//最小旋转角
 const double K2 = 0.005 * PI;						//最大旋转角
 const double EPSLION = 0.1;							//H-ep门
 
-static vector<pair<int, int>> GCP_EDGE;				//无向图边集合
-static vector<pair<double, double>> TSP_CITIES;		//旅行商城市坐标
 static vector<double> PACK_WEIGHT;
 static vector<double> PACK_VAL;
 
@@ -69,8 +67,6 @@ private:
 	string mBinary;			  //二进制编码
 	vector<double> mGenesDec; //每个基因（变量）的十进制表示
 	int mSpecFlag;			  //记录特殊个体的标志（0：普通个体 1：最优个体 2：最差个体）
-	int mSameCnt;			  //当前个体解中相邻顶点有相同颜色的对数，为0才是可用解
-	int mColorNum;			  //当前个体解中使用颜色个数，越小越好
 public:
 	Individual() {
 		//无参构造函数，创建初始化种群
@@ -83,8 +79,6 @@ public:
 		this->mBinary = "";
 		this->mGenesDec.resize(GENE_NUM, 0);
 		this->mSpecFlag = 0;
-		this->mSameCnt = -1;
-		this->mColorNum = -1;
 	};
 	Individual(vector<qubit> chrom, double fitness, string binary) {
 		this->mChrom = chrom;
@@ -92,8 +86,6 @@ public:
 		this->mBinary = binary;
 		this->mGenesDec.resize(GENE_NUM, 0);
 		this->mSpecFlag = 0;
-		this->mSameCnt = -1;
-		this->mColorNum = -1;
 	}
 	vector<qubit> getChrom() {
 		return this->mChrom;
@@ -120,18 +112,6 @@ public:
 	void setSpecFlag(int specFlag) {
 		this->mSpecFlag = specFlag;
 	}
-	int getSameCnt() {
-		return this->mSameCnt;
-	}
-	void setSameCnt(int sameCnt) {
-		this->mSameCnt = sameCnt;
-	}
-	int getColorNum() {
-		return this->mColorNum;
-	}
-	void setColorNum(int colorNum) {
-		this->mColorNum = colorNum;
-	}
 	string getBinary() {
 		return this->mBinary;
 	}
@@ -152,25 +132,8 @@ public:
 	}
 	string toString() {
 		string ans = "";
-		////打印α
-		//ans += "qubit alpha :";
-		//for (qubit q : mChrom) {
-		//	ans += to_string(q.alpha) + " ";
-		//}
-		//ans += "\n";
-		////打印β
-		//ans += "qubit beta :";
-		//for (qubit q : mChrom) {
-		//	ans += to_string(q.beta) + " ";
-		//}
-		/*ans += '\n';
-		for (int i = 0; i < mGenesDec.size(); i++) {
-			ans += "x" + to_string(i) + " = " + to_string(mGenesDec[i]) + "\n";
-		}*/
 		//打印适应值
 		ans += "mFitness = " + to_string(mFitness);
-		ans += "\nmSameCnt = " + to_string(mSameCnt);
-		ans += "\nmColorNum = " + to_string(mColorNum);
 		ans += "\n";
 		//打印二进制编码
 		ans += "mBinary = " + mBinary + "\n";
@@ -210,3 +173,29 @@ struct tabuItem {
 		return ans;
 	}
 };
+
+double srand();
+
+void initPop(int M, int N, vector<Individual>& population, int strategyFlag);
+
+void collapse(vector<Individual>& population);
+
+void qGateAdaptive(vector<Individual>& population, Individual& best, double& f_max, double& f_min);
+
+vector<double> decodeBinary(string binary, vector<range>& bound);
+
+double packFunc(Individual& indv, vector<double> weight, vector<double> value);
+
+void calFitness(vector<Individual>& population, Individual& best, double& f_max, double& f_min);
+
+void catastrophe(vector<Individual>& population, int initLot);
+
+void mutation(vector<Individual>& population, Individual& best);
+
+void tabu(vector<Individual>& population, Individual& best);
+
+int readEdge(vector<pair<int, int>>& edge, string path);
+
+void printPopulation(vector<Individual>& pop);
+
+void quantumAlgorithm();

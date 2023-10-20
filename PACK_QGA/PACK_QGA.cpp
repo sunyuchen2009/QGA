@@ -5,7 +5,6 @@ using namespace std;
 double srand() {
     int N = rand() % 999;
     double random = static_cast<double>(N) / 1000.0;;//随机产生0到1的小数
-    //cout << random << endl;
     return random;
 }
 
@@ -264,11 +263,10 @@ double packFunc(Individual& indv, vector<double> weight, vector<double> value) {
     }
     //cout << "wei = " << weightTemp << endl;
 
-    indv.setColorNum(weightTemp);
     for (int i = 0; i < value.size(); i++) {
         fitness += x[i] * value[i];
     }
-    indv.setSameCnt(fitness);
+
     if (weightTemp > PACK_MAX) {
         fitness -= 100 * (weightTemp - PACK_MAX);
     }
@@ -621,7 +619,7 @@ void quantumAlgorithm() {
         flag--;
         if (!flag) {
             flag = 50;
-            //tabu(population, best);
+            tabu(population, best);
         }
         mutation(population, best);
     }
@@ -725,8 +723,6 @@ int main()
         break;
     }
 
-    TSP_CITIES = { {16.47, 96.10}, {16.47, 94.44}, {20.09, 92.54}, {22.39, 93.37}, {25.23, 97.24}, {22.00, 96.05}, {20.47, 97.02},
-                    {17.20, 96.29}, {16.30, 97.38}, {14.05, 98.12}, {16.53, 97.38}, {21.52, 95.59}, {19.41, 97.13}, {20.09, 94.55} };
     srand(unsigned(time(NULL)));
     quantumAlgorithm();
 
